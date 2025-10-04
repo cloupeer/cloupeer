@@ -7,6 +7,7 @@
 *.dll
 *.so
 *.dylib
+*.tar
 
 # Test binary, built with `go test -c`
 *.test
@@ -28,5 +29,12 @@ go.work.sum
 .env
 
 # Editor/IDE
-# .idea/
-# .vscode/
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+
+# Build
+/bin
+/_output

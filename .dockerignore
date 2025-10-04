@@ -1,0 +1,28 @@
+# More info: https://docs.docker.com/engine/reference/builder/#dockerignore-file
+# Ignore all build outputs and locally installed development tools.
+/_output
+/bin
+
+# The build system itself is not needed inside the container context.
+/build
+/hack
+Makefile
+
+# Never include version control history, test code, or documentation.
+.git
+/test
+/docs
+*.md
+
+# Ignore meta-files for git and docker itself.
+.gitignore
+.dockerignore
+
+# Ignore IDE and Editor-specific Files
+.vscode/
+.idea/
+
+# Ignore OS-specific Files
+.DS_Store
+*~
+*.swp
