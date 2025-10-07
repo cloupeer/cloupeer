@@ -1,4 +1,0 @@
-## Append samples of your project ##
-resources:
-- device_v1alpha1_physicaldevice.yaml
-# +kubebuilder:scaffold:manifestskustomizesamples

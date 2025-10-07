@@ -1,0 +1,12 @@
+resources:
+  - deployment.yaml
+  - metrics_service.yaml
+  - rbac-operator.yaml
+  - rbac-leader-election.yaml
+  - rbac-metrics.yaml
+
+patches:
+  - path: metrics_patch.yaml
+    target:
+      kind: Deployment
+      name: controller-manager
