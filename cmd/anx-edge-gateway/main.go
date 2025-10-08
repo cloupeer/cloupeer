@@ -1,1 +1,5 @@
-package anxedgegateway
+package main
+
+func main() {
+
+}

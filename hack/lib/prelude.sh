@@ -51,6 +51,7 @@ info() {
 # Usage: error "Something went wrong."
 error() {
     echo -e "\033[31mERROR: ${1}\033[0m" >&2
+    exit 1
 }
 
 
@@ -63,7 +64,48 @@ _require_one_component() {
     local target_name="$1"
     # Create an array from the second argument onwards
     local args=("${@:2}")
+
     if [[ ${#args[@]} -ne 1 ]] || [[ -z "${args[0]}" ]]; then
         error "Exactly one component name is required for the '${target_name}' target. Usage: 'make ${target_name} <component_name>'"
     fi
+}
+
+# _require_env_components ensures that exactly two non-empty arguments are provided:
+# an environment name and a component name (or 'all').
+#
+# This is a dedicated validation function for targets like 'deploy' or 'undeploy'
+# to verify they receive the correct number and type of arguments before proceeding.
+#
+# Parameters:
+#   $1 - target_name: The name of the make target that called this function (e.g., "deploy").
+#   $@ - args: The array of arguments passed to the make target (e.g., "development" "my-app").
+_require_env_components() {
+    local target_name="$1"
+    local args=("${@:2}")
+
+    if [[ ${#args[@]} -ne 2 ]] || [[ -z "${args[0]}" ]] || [[ -z "${args[1]}" ]]; then
+        local error_message
+        error_message=$(printf "Exactly one environment and one component name are required for the '%s' target.\nUsage: 'make %s <env_name> all' OR 'make %s <env_name> <component_name>'" \
+            "${target_name}" "${target_name}" "${target_name}")
+        
+        error "${error_message}"
+    fi
+}
+
+# _require_non_empty_args ensures that at least one argument is passed,
+# and that ALL passed arguments are non-empty strings.
+# Usage: _require_non_empty_args <target_name> <arg_array>
+_require_non_empty_args() {
+    local target_name="$1"
+    local args=("${@:2}")
+
+    if [[ ${#args[@]} -eq 0 ]]; then
+        error "At least one argument is required for the '${target_name}' target. None were provided."
+    fi
+
+    for arg in "${args[@]}"; do
+        if [[ -z "${arg}" ]]; then
+            error "Arguments for the '${target_name}' target cannot be empty strings. Please provide valid arguments."
+        fi
+    done
 }

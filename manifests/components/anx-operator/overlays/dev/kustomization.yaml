@@ -9,14 +9,15 @@ namespace: anankix-system
 namePrefix: anankix-
 
 # Labels to add to all resources and selectors.
-#labels:
-#- includeSelectors: true
-#  pairs:
-#    someName: someValue
+labels:
+- includeSelectors: true
+  pairs:
+    app.kubernetes.io/name: anx-operator
+    app.kubernetes.io/part-of: anankix
+    app.kubernetes.io/managed-by: kustomize
 
+# All resources that this overlay builds upon.
 resources:
-- ../../../../base/crd
-- ../../../../base/rbac
 - ../../base
 # [WEBHOOK] To enable webhook, uncomment all the sections with [WEBHOOK] prefix including the one in
 # crd/kustomization.yaml

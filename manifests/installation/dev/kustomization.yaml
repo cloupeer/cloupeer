@@ -1,2 +1,4 @@
 resources:
-- ../../components/anx-operator/overlays/prod
+- ../../base/crd
+- ../../base/rbac
+- ../../components/anx-operator/overlays/dev

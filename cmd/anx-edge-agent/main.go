@@ -1,1 +1,5 @@
-package anxedgeagent
+package main
+
+func main() {
+
+}

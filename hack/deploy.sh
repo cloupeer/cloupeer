@@ -46,58 +46,94 @@ readonly VERSION="${VERSION:-dev}"
 # Task Functions
 # ---
 
-# run_install applies all CRD manifests to the cluster.
+# run_install applies all base resources (CRDs, user-facing RBAC) to the cluster.
 # This is a global action for the entire project.
 run_install() {
-    info "Installing all CRDs into the cluster..."
+    info "Installing all base resources into the cluster..."
     cd "${PROJECT_ROOT}"
-    "${KUSTOMIZE}" build config/crd | "${KUBECTL}" apply -f -
+    "${KUSTOMIZE}" build manifests/base | "${KUBECTL}" apply -f -
 }
 
-# run_uninstall deletes all CRD manifests from the cluster.
+# run_uninstall deletes all base resources from the cluster.
 run_uninstall() {
-    info "Uninstalling all CRDs from the cluster..."
+    info "Uninstalling all base resources from the cluster..."
     cd "${PROJECT_ROOT}"
-    # Consumes 'ignore-not-found' from the environment, defaulting to false.
-    # Usage: make uninstall ignore-not-found=true
-    local ignore_not_found="${ignore_not_found:-false}"
-    "${KUSTOMIZE}" build config/crd | "${KUBECTL}" delete --ignore-not-found="${ignore_not_found}" -f -
+    "${KUSTOMIZE}" build manifests/base | "${KUBECTL}" delete --ignore-not-found=true -f -
 }
 
-# run_deploy deploys a specific component's controller manager to the cluster.
+# run_deploy installs components to the cluster.
+# It can install all components for an environment, or a single specific component.
 run_deploy() {
-    local component_name="$1"
-    info "Deploying controller manager for component '${component_name}'..."
+    local env_name="$1"
+    local component_name="$2"
+    local kustomize_path
+
     cd "${PROJECT_ROOT}"
 
-    local kustomize_path="config/components/${component_name}"
-    if ! [ -d "${kustomize_path}" ]; then
-        error "Kustomize directory not found for component '${component_name}' at ${kustomize_path}"
+    if [[ "${component_name}" == "all" ]]; then
+        info "Deploying all components for environment '${env_name}'..."
+        info "    Setting images for all components..."
+        for component in ${COMPONENTS}; do
+            local component_kustomize_path="manifests/components/${component}/overlays/${env_name}"
+            
+            if ! [ -d "${component_kustomize_path}" ]; then
+                error "Kustomize directory not found for component '${component}' at: ${component_kustomize_path}"
+            fi
+
+            local img_tag="${IMG:-${IMAGE_TAG_BASE}-${component}:v${VERSION}}"
+            info "        - Setting image for '${component}' to: ${img_tag}"
+            
+            (cd "${component_kustomize_path}" && "${KUSTOMIZE}" edit set image "${component}"="${img_tag}")
+        done
+        
+        kustomize_path="manifests/installation/${env_name}"
+
+    else
+        info "Deploying single component '${component_name}' for environment '${env_name}'..."
+        kustomize_path="manifests/components/${component_name}/overlays/${env_name}"
+
+        if ! [ -d "${kustomize_path}" ]; then
+            error "Kustomize directory not found for component '${component_name}' at: ${kustomize_path}"
+        fi
+
+        local img_tag="${IMG:-${IMAGE_TAG_BASE}-${component_name}:v${VERSION}}"
+        info "    Setting image to: ${img_tag}"
+        
+        (cd "${kustomize_path}" && "${KUSTOMIZE}" edit set image "${component_name}"="${img_tag}")
     fi
 
-    local img_tag="${IMG:-${IMAGE_TAG_BASE}-${component_name}:v${VERSION}}"
-    info "    Setting image to: ${img_tag}"
-    
-    # Set the correct image for the deployment using kustomize.
-    (cd "${kustomize_path}" && "${KUSTOMIZE}" edit set image controller="${img_tag}")
-
-    # Build the final manifests from the component's overlay and apply them.
+    info "    Applying manifests from: ${kustomize_path}"
     "${KUSTOMIZE}" build "${kustomize_path}" | "${KUBECTL}" apply -f -
+    
+    info "Successfully deployed '${component_name}' for environment '${env_name}'."
 }
 
-# run_undeploy removes a specific component's controller manager from the cluster.
+# run_undeploy uninstalls components from the cluster.
+# It can uninstall all components for an environment, or a single specific component.
 run_undeploy() {
-    local component_name="$1"
-    info "Undeploying controller manager for component '${component_name}'..."
+    local env_name="$1"
+    local component_name="$2"
+    local kustomize_path
+
     cd "${PROJECT_ROOT}"
-    
-    local kustomize_path="config/components/${component_name}"
-    if ! [ -d "${kustomize_path}" ]; then
-        error "Kustomize directory not found for component '${component_name}' at ${kustomize_path}"
+
+    if [[ "${component_name}" == "all" ]]; then
+        info "Uninstalling all components from environment '${env_name}'..."
+        kustomize_path="manifests/installation/${env_name}"
+    else
+        info "Uninstalling single component '${component_name}' from environment '${env_name}'..."
+        kustomize_path="manifests/components/${component_name}/overlays/${env_name}"
     fi
 
-    local ignore_not_found="${ignore_not_found:-false}"
-    "${KUSTOMIZE}" build "${kustomize_path}" | "${KUBECTL}" delete --ignore-not-found="${ignore_not_found}" -f -
+    if ! [ -d "${kustomize_path}" ]; then
+        error "Kustomize directory not found for undeploy at: ${kustomize_path}. Skipping."
+    fi
+
+    info "    Deleting manifests from: ${kustomize_path}"
+
+    "${KUSTOMIZE}" build "${kustomize_path}" | "${KUBECTL}" delete --ignore-not-found=true -f -
+    
+    info "Successfully uninstalled '${component_name}' from environment '${env_name}'."
 }
 
 # ---
@@ -122,12 +158,12 @@ main() {
             ;;
         deploy)
             # We need a shared helper for this check. Let's assume it's in prelude.sh
-            _require_one_component "$target" "$@"
-            run_deploy "${args[0]}"
+            _require_env_components "$target" "${args[@]}"
+            run_deploy "${args[@]}"
             ;;
         undeploy)
-            _require_one_component "$target" "$@"
-            run_undeploy "${args[0]}"
+            _require_env_components "$target" "${args[@]}"
+            run_undeploy "${args[@]}"
             ;;
         *)
             error "Unknown target '${target}' for deploy.sh."

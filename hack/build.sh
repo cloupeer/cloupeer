@@ -164,22 +164,22 @@ main() {
             ;;
 
         run)
-            _require_one_component "$target" "$@"
+            _require_one_component "$target" "${args[@]}"
             run_controller "${args[0]}"
             ;;
 
         docker-build)
-            _require_one_component "$target" "$@"
+            _require_one_component "$target" "${args[@]}"
             build_docker_image "${args[0]}"
             ;;
 
         docker-push)
-            _require_one_component "$target" "$@"
+            _require_one_component "$target" "${args[@]}"
             push_docker_image "${args[0]}"
             ;;
             
         docker-buildx)
-            _require_one_component "$target" "$@"
+            _require_one_component "$target" "${args[@]}"
             buildx_docker_image "${args[0]}"
             ;;
         

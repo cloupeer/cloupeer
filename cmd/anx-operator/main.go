@@ -1,5 +1,5 @@
 /*
-Copyright 2025.
+Copyright 2025 Anankix.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -35,9 +35,8 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
-	devicev1alpha1 "github.com/anankix/anankix/api/v1alpha1"
-	"github.com/anankix/anankix/internal/controller"
-	// +kubebuilder:scaffold:imports
+	"github.com/anankix/anankix/internal/operator/controller"
+	edgev1alpha1 "github.com/anankix/anankix/pkg/apis/edge/v1alpha1"
 )
 
 var (
@@ -47,9 +46,7 @@ var (
 
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
-
-	utilruntime.Must(devicev1alpha1.AddToScheme(scheme))
-	// +kubebuilder:scaffold:scheme
+	utilruntime.Must(edgev1alpha1.AddToScheme(scheme))
 }
 
 func main() {
@@ -126,7 +123,7 @@ func main() {
 		WebhookServer:          webhookServer,
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
-		LeaderElectionID:       "36d5d549.anankix.io",
+		LeaderElectionID:       "fbd1a47d.anankix",
 		// LeaderElectionReleaseOnCancel defines if the leader should step down voluntarily
 		// when the Manager ends. This requires the binary to immediately end when the
 		// Manager is stopped, otherwise, this setting is unsafe. Setting this significantly

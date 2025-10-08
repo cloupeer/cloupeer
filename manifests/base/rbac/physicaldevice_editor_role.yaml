@@ -1,0 +1,27 @@
+# permissions for end users to edit physicaldevices.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: anankix
+    app.kubernetes.io/managed-by: kustomize
+  name: physicaldevice-editor-role
+rules:
+- apiGroups:
+  - edge.anankix
+  resources:
+  - physicaldevices
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - edge.anankix
+  resources:
+  - physicaldevices/status
+  verbs:
+  - get

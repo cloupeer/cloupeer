@@ -73,18 +73,16 @@ SHELL := /usr/bin/env bash -o errexit -o pipefail -o nounset
 _all_goals := $(MAKECMDGOALS)
 
 # 2. Define a "whitelist" of targets that are designed to accept a trailing argument.
-_targets_with_args := run docker-build docker-push docker-buildx installer bundle bundle-build bundle-push
+_targets_with_args := run docker-build docker-push docker-buildx installer bundle bundle-build bundle-push deploy undeploy
 
 # 3. Check if one of our whitelisted targets was actually invoked.
 #    'filter' finds the intersection, and 'firstword' grabs the first one found.
 _invoked_target := $(firstword $(filter $(_targets_with_args), $(_all_goals)))
 
-# 4. If a whitelisted target was found, extract the word that comes *after* it.
-#    This extracted word becomes our component argument.
-#    - 'subst' removes the target name from the full goal list, leaving the argument.
-#    - 'word 2' is a safeguard to grab just the first argument if multiple are passed.
-#    - 'if' ensures this variable is only set when a relevant target is called.
-component_arg := $(if $(_invoked_target),$(word 2, $(subst $(_invoked_target),,$(value _all_goals))))
+# 4. If a whitelisted target was found, extract the argument(s) that come *after* it.
+#    'filter-out' removes the known target from the goal list, leaving only the arguments.
+component_arg := $(if $(_invoked_target),$(filter-out $(_invoked_target), $(_all_goals)))
+
 
 # ---
 # Dependency Management
@@ -152,9 +150,9 @@ help: ## Display this help.
 manifests: $(CONTROLLER_GEN) ## Generate K8s manifests (CRDs, RBAC, etc.) in `config/`.
 	@./hack/generate.sh manifests
 
-.PHONY: deepcopy
-deepcopy: $(CONTROLLER_GEN) ## Generate deepcopy code (zz_generated.deepcopy.go).
-	@./hack/generate.sh deepcopy
+.PHONY: generate
+generate: $(CONTROLLER_GEN) ## Generate deepcopy code (zz_generated.deepcopy.go).
+	@./hack/generate.sh generate
 
 .PHONY: dockerfiles
 dockerfiles: $(addprefix gen-dockerfile-,$(COMPONENTS)) ## Generate all component Dockerfiles in `_output/images/`.
@@ -177,7 +175,7 @@ lint-fix: $(GOLANGCI_LINT) ## Run golangci-lint linter and perform fixes.
 	@./hack/verify.sh lint-fix $(BINS)
 
 .PHONY: test
-test: manifests deepcopy fmt vet $(ENVTEST) ## Run unit and integration tests (excluding e2e).
+test: manifests generate fmt vet $(ENVTEST) ## Run unit and integration tests (excluding e2e).
 	@./hack/test.sh unit $(BINS)
 
 .PHONY: test-e2e
@@ -188,11 +186,11 @@ test-e2e: ## Run end-to-end tests (requires a running cluster).
 ##@ Build
 
 .PHONY: build
-build: manifests deepcopy fmt vet ## Build all component binaries. All: 'make build'. Specific: 'make build BINS="comp1 comp2"'.
+build: manifests generate fmt vet ## Build all component binaries. All: 'make build'. Specific: 'make build BINS="comp1 comp2"'.
 	@./hack/build.sh build $(BINS)
 
 .PHONY: run
-run: manifests deepcopy fmt vet ## Run a component. Usage: 'make run <component_name>'.
+run: manifests generate fmt vet ## Run a component. Usage: 'make run <component_name>'.
 	@./hack/build.sh run $(component_arg)
 
 .PHONY: docker-build
@@ -216,25 +214,25 @@ install: manifests $(KUSTOMIZE) ## Install CRDs into the K8s cluster.
 
 .PHONY: uninstall
 uninstall: manifests $(KUSTOMIZE) ## Uninstall CRDs from the K8s cluster.
-	@ignore-not-found=$(ignore-not-found) ./scripts/deploy.sh uninstall
+	@./hack/deploy.sh uninstall
 
 .PHONY: deploy
 deploy: manifests $(KUSTOMIZE) ## Deploy controller to the K8s cluster.
-	@./hack/deploy.sh deploy
+	@./hack/deploy.sh deploy $(component_arg)
 
 .PHONY: undeploy
 undeploy: $(KUSTOMIZE) ## Undeploy controller from the K8s cluster.
-	@ignore-not-found=$(ignore-not-found) ./scripts/deploy.sh undeploy
+	@./hack/deploy.sh undeploy $(component_arg)
 
 
 ##@ Release
 
 .PHONY: installer
-installer: manifests deepcopy $(KUSTOMIZE) ## Generate a consolidated install.yaml in `_output/release/`.
+installer: manifests generate $(KUSTOMIZE) ## Generate a consolidated install.yaml in `_output/release/`.
 	@./hack/release.sh installer $(component_arg)
 
 .PHONY: bundle
-bundle: manifests deepcopy$(KUSTOMIZE) $(OPERATOR_SDK) ## Generate bundle manifests and metadata.
+bundle: manifests generate $(KUSTOMIZE) $(OPERATOR_SDK) ## Generate bundle manifests and metadata.
 	@./hack/release.sh bundle $(component_arg)
 
 .PHONY: bundle-build

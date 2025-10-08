@@ -11,21 +11,6 @@ metadata:
 ---
 
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  labels:
-    app.kubernetes.io/name: anx-operator
-    app.kubernetes.io/part-of: anankix
-    app.kubernetes.io/managed-by: kustomize
-  name: manager-role
-rules:
-- apiGroups: [""]
-  resources: ["pods"]
-  verbs: ["get", "list", "watch"]
-
----
-
-apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   labels:

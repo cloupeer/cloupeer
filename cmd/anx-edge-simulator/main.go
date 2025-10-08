@@ -1,1 +1,5 @@
-package anxedgesimulator
+package main
+
+func main() {
+
+}

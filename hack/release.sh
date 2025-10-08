@@ -152,19 +152,19 @@ main() {
 
     case "$target" in
         installer)
-            _require_one_component "$target" "$@"
+            _require_one_component "$target" "${args[@]}"
             generate_installer_yaml "${args[0]}"
             ;;
         bundle)
-            _require_one_component "$target" "$@"
+            _require_one_component "$target" "${args[@]}"
             generate_bundle "${args[0]}"
             ;;
         bundle-build)
-            _require_one_component "$target" "$@"
+            _require_one_component "$target" "${args[@]}"
             build_bundle_image "${args[0]}"
             ;;
         bundle-push)
-            _require_one_component "$target" "$@"
+            _require_one_component "$target" "${args[@]}"
             push_bundle_image "${args[0]}"
             ;;
         catalog-build)
