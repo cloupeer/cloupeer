@@ -83,6 +83,11 @@ _invoked_target := $(firstword $(filter $(_targets_with_args), $(_all_goals)))
 #    'filter-out' removes the known target from the goal list, leaving only the arguments.
 component_arg := $(if $(_invoked_target),$(filter-out $(_invoked_target), $(_all_goals)))
 
+# Solution: Dynamically declare all argument-like words as phony targets with an empty recipe.
+# This prevents "No rule to make target..." errors for arguments passed after the main target.
+# It correctly handles patterns like `make <target> <arg1>` and `make <target> <arg1> <arg2>`.
+.PHONY: $(component_arg)
+$(component_arg): ; # The semicolon is stylistic for an explicit empty recipe, and is optional.
 
 # ---
 # Dependency Management

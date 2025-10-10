@@ -23,23 +23,81 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
+// FirmwareSpec defines the desired firmware state.
+type FirmwareSpec struct {
+	// Version specifies the target firmware version.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinLength=1
+	Version string `json:"version"`
+
+	// URL points to the firmware package location.
+	// It can be an HTTP/S endpoint or an object storage URL.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Pattern=`^https?://.*`
+	URL string `json:"url"`
+
+	// Checksum is the SHA-256 checksum of the firmware package
+	// used by the device agent to verify integrity.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinLength=64
+	// +kubebuilder:validation:MaxLength=64
+	Checksum string `json:"checksum"`
+}
+
 // PhysicalDeviceSpec defines the desired state of PhysicalDevice
 type PhysicalDeviceSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	// DeviceID is a unique identifier for the physical device, typically assigned by manufacturing
+	// or provisioning systems. This is the minimal field for Hello World onboarding.
+	// +kubebuilder:validation:Required
+	DeviceID string `json:"deviceId"`
 
-	// Foo is an example field of PhysicalDevice. Edit physicaldevice_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	// Firmware holds the desired firmware specification for the device.
+	// The operator will create a FirmwareUpgradeTask if the reported version
+	// in the status does not match this spec.
+	// +optional
+	Firmware *FirmwareSpec `json:"firmware,omitempty"`
+}
+
+// UpgradeStatus defines the status of the ongoing or last completed firmware upgrade.
+type UpgradeStatus struct {
+	// TaskRef is the name of the FirmwareUpgradeTask resource handling the current upgrade.
+	TaskRef string `json:"taskRef,omitempty"`
+
+	// State reflects the current phase of the upgrade process.
+	// e.g., "InProgress", "Succeeded", "Failed".
+	State string `json:"state,omitempty"`
+
+	// LastFailureMessage provides details on the last failed upgrade attempt.
+	LastFailureMessage string `json:"lastFailureMessage,omitempty"`
+
+	// LastSuccessfulVersion is the last version that was successfully installed.
+	LastSuccessfulVersion string `json:"lastSuccessfulVersion,omitempty"`
+
+	// LastAttemptTime is the timestamp of the last upgrade attempt.
+	LastAttemptTime *metav1.Time `json:"lastAttemptTime,omitempty"`
 }
 
 // PhysicalDeviceStatus defines the observed state of PhysicalDevice
 type PhysicalDeviceStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	// LastHeartbeatTime records the last time a heartbeat was received from the device via gateway
+	LastHeartbeatTime metav1.Time `json:"lastHeartbeatTime,omitempty"`
+	// IPAddress is the last known IP address of the device as observed by the gateway
+	IPAddress string `json:"ipAddress,omitempty"`
+
+	// CurrentFirmwareVersion is the version reported by the device in its heartbeat.
+	CurrentFirmwareVersion string `json:"currentFirmwareVersion,omitempty"`
+
+	// FirmwareUpgradeStatus tracks the state of the firmware upgrade process.
+	FirmwareUpgradeStatus *UpgradeStatus `json:"firmwareUpgradeStatus,omitempty"`
 }
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="DEVICE_ID",type="string",JSONPath=".spec.deviceId"
+// +kubebuilder:printcolumn:name="DESIRED_VERSION",type="string",JSONPath=".spec.firmware.version"
+// +kubebuilder:printcolumn:name="REPORTED_VERSION",type="string",JSONPath=".status.currentFirmwareVersion"
+// +kubebuilder:printcolumn:name="UPGRADE_STATE",type="string",JSONPath=".status.firmwareUpgradeStatus.state"
+// +kubebuilder:printcolumn:name="AGE",type="date",JSONPath=".metadata.creationTimestamp"
 
 // PhysicalDevice is the Schema for the physicaldevices API
 type PhysicalDevice struct {

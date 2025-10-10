@@ -2,7 +2,7 @@
 # It aggregates all auto-generated CRD definitions from the ./bases directory.
 # This module is then consumed by the top-level 'installation' overlays.
 resources:
-- bases/
+- bases
 
 patches:
 # [WEBHOOK] To enable webhook, uncomment all the sections with [WEBHOOK] prefix.

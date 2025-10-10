@@ -1,4 +1,4 @@
 resources:
-- ../../base/crd
-- ../../base/rbac
-- ../../components/anx-operator/overlays/dev
+  - ../../base
+  - ../../components/anx-operator/overlays/dev
+  - ../../components/anx-edge-gateway/overlays/dev

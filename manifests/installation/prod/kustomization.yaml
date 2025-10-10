@@ -1,4 +1,3 @@
 resources:
-- ../../base/crd
-- ../../base/rbac
+- ../../base
 - ../../components/anx-operator/overlays/prod

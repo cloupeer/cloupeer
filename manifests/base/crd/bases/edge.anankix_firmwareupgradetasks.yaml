@@ -4,14 +4,14 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.16.1
-  name: physicaldevices.edge.anankix
+  name: firmwareupgradetasks.edge.anankix
 spec:
   group: edge.anankix
   names:
-    kind: PhysicalDevice
-    listKind: PhysicalDeviceList
-    plural: physicaldevices
-    singular: physicaldevice
+    kind: FirmwareUpgradeTask
+    listKind: FirmwareUpgradeTaskList
+    plural: firmwareupgradetasks
+    singular: firmwareupgradetask
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
@@ -19,13 +19,10 @@ spec:
       name: DEVICE_ID
       type: string
     - jsonPath: .spec.firmware.version
-      name: DESIRED_VERSION
+      name: VERSION
       type: string
-    - jsonPath: .status.currentFirmwareVersion
-      name: REPORTED_VERSION
-      type: string
-    - jsonPath: .status.firmwareUpgradeStatus.state
-      name: UPGRADE_STATE
+    - jsonPath: .status.phase
+      name: STATUS
       type: string
     - jsonPath: .metadata.creationTimestamp
       name: AGE
@@ -33,7 +30,8 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: PhysicalDevice is the Schema for the physicaldevices API
+        description: FirmwareUpgradeTask is the Schema for the firmwareupgradetasks
+          API
         properties:
           apiVersion:
             description: |-
@@ -53,18 +51,15 @@ spec:
           metadata:
             type: object
           spec:
-            description: PhysicalDeviceSpec defines the desired state of PhysicalDevice
+            description: FirmwareUpgradeTaskSpec defines the desired state of FirmwareUpgradeTask
             properties:
               deviceId:
                 description: |-
-                  DeviceID is a unique identifier for the physical device, typically assigned by manufacturing
-                  or provisioning systems. This is the minimal field for Hello World onboarding.
+                  DeviceID is the target device for this upgrade task.
+                  It's used by the gateway to look up tasks for a specific device.
                 type: string
               firmware:
-                description: |-
-                  Firmware holds the desired firmware specification for the device.
-                  The operator will create a FirmwareUpgradeTask if the reported version
-                  in the status does not match this spec.
+                description: Firmware contains the details of the firmware to be installed.
                 properties:
                   checksum:
                     description: |-
@@ -90,48 +85,24 @@ spec:
                 type: object
             required:
             - deviceId
+            - firmware
             type: object
           status:
-            description: PhysicalDeviceStatus defines the observed state of PhysicalDevice
+            description: FirmwareUpgradeTaskStatus defines the observed state of FirmwareUpgradeTask
             properties:
-              currentFirmwareVersion:
-                description: CurrentFirmwareVersion is the version reported by the
-                  device in its heartbeat.
+              completionTime:
+                description: CompletionTime is the time the task was completed.
+                format: date-time
                 type: string
-              firmwareUpgradeStatus:
-                description: FirmwareUpgradeStatus tracks the state of the firmware
-                  upgrade process.
-                properties:
-                  lastAttemptTime:
-                    description: LastAttemptTime is the timestamp of the last upgrade
-                      attempt.
-                    format: date-time
-                    type: string
-                  lastFailureMessage:
-                    description: LastFailureMessage provides details on the last failed
-                      upgrade attempt.
-                    type: string
-                  lastSuccessfulVersion:
-                    description: LastSuccessfulVersion is the last version that was
-                      successfully installed.
-                    type: string
-                  state:
-                    description: |-
-                      State reflects the current phase of the upgrade process.
-                      e.g., "InProgress", "Succeeded", "Failed".
-                    type: string
-                  taskRef:
-                    description: TaskRef is the name of the FirmwareUpgradeTask resource
-                      handling the current upgrade.
-                    type: string
-                type: object
-              ipAddress:
-                description: IPAddress is the last known IP address of the device
-                  as observed by the gateway
+              message:
+                description: Message provides human-readable details about the current
+                  state, especially for failures.
                 type: string
-              lastHeartbeatTime:
-                description: LastHeartbeatTime records the last time a heartbeat was
-                  received from the device via gateway
+              phase:
+                description: Phase is the current phase of the task.
+                type: string
+              startTime:
+                description: StartTime is the time the task was picked up by the agent.
                 format: date-time
                 type: string
             type: object

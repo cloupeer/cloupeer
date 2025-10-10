@@ -1,0 +1,30 @@
+# manifests/components/anx-edge-gateway/base/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: edge-gateway
+  labels:
+    app: edge-gateway
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: edge-gateway
+  template:
+    metadata:
+      labels:
+        app: edge-gateway
+    spec:
+      serviceAccountName: edge-gateway
+      containers:
+      - name: gateway
+        # This image tag is a placeholder and will be replaced by Kustomize during deployment.
+        image: anankix.io/anankix/anx-edge-gateway:latest
+        ports:
+        - name: http
+          containerPort: 9090
+        env:
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace

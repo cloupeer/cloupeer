@@ -1,0 +1,16 @@
+# manifests/components/anx-edge-gateway/base/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: edge-gateway
+  labels:
+    app: edge-gateway
+spec:
+  selector:
+    app: edge-gateway
+  ports:
+  - name: http
+    protocol: TCP
+    port: 9090
+    targetPort: 9090
+  type: NodePort
