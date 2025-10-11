@@ -6,12 +6,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"time"
 
 	edgev1alpha1 "github.com/anankix/anankix/pkg/apis/edge/v1alpha1"
+	"github.com/anankix/anankix/pkg/log"
 )
 
 const versionFile = "/tmp/anx_agent_version.txt"
@@ -41,7 +41,7 @@ func readVersionFromFile() string {
 	data, err := os.ReadFile(versionFile)
 	if err != nil {
 		// If file doesn't exist, assume initial version
-		log.Printf("Version file not found, defaulting to v1.0.0")
+		log.Warn("Version file not found, defaulting to v1.0.0", "file", versionFile, err)
 		return "v1.0.0"
 	}
 	return string(data)
@@ -49,7 +49,7 @@ func readVersionFromFile() string {
 
 // writeVersionToFile persists the new version to the local file.
 func writeVersionToFile(version string) error {
-	log.Printf("Persisting new version to file: %s", version)
+	log.Info("Persisting new version to file", "version", version)
 	return os.WriteFile(versionFile, []byte(version), 0644)
 }
 
@@ -63,14 +63,14 @@ func (s *AgentState) sendHeartbeat() {
 	url := fmt.Sprintf("%s/heartbeat", s.GatewayURL)
 	resp, err := s.Client.Post(url, "application/json", bytes.NewReader(body))
 	if err != nil {
-		log.Printf("ERROR: Heartbeat failed: %v", err)
+		log.Error(err, "Heartbeat failed")
 		return
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode >= 300 {
-		log.Printf("WARN: Heartbeat returned non-2xx status: %s", resp.Status)
+		log.Warn("Heartbeat returned non-2xx status", "status", resp.Status)
 	} else {
-		log.Printf("Heartbeat sent successfully (version: %s)", s.CurrentFirmwareVersion)
+		log.Info("Heartbeat sent successfully", "version", s.CurrentFirmwareVersion)
 	}
 }
 
@@ -79,27 +79,27 @@ func (s *AgentState) checkForTask() *edgev1alpha1.FirmwareUpgradeTask {
 	url := fmt.Sprintf("%s/tasks/%s", s.GatewayURL, s.DeviceID)
 	resp, err := s.Client.Get(url)
 	if err != nil {
-		log.Printf("ERROR: Failed to check for tasks: %v", err)
+		log.Error(err, "Failed to check for tasks")
 		return nil
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusNoContent {
-		log.Printf("No pending tasks.")
+		log.Warn("No pending tasks.")
 		return nil
 	}
 	if resp.StatusCode != http.StatusOK {
-		log.Printf("WARN: Check for tasks returned non-200 status: %s", resp.Status)
+		log.Warn("Check for tasks returned non-200 status", "status", resp.Status)
 		return nil
 	}
 
 	var task edgev1alpha1.FirmwareUpgradeTask
 	if err := json.NewDecoder(resp.Body).Decode(&task); err != nil {
-		log.Printf("ERROR: Failed to decode task: %v", err)
+		log.Error(err, "Failed to decode task")
 		return nil
 	}
 
-	log.Printf("INFO: Received task %s to upgrade to version %s", task.Name, task.Spec.Firmware.Version)
+	log.Info("Received task to upgrade to version", "taskName", task.Name, "version", task.Spec.Firmware.Version)
 	return &task
 }
 
@@ -114,11 +114,11 @@ func (s *AgentState) updateTaskStatus(taskName string, phase edgev1alpha1.TaskPh
 
 	resp, err := s.Client.Do(req)
 	if err != nil {
-		log.Printf("ERROR: Failed to update task status for %s: %v", taskName, err)
+		log.Error(err, "Failed to update task status", "taskName", taskName)
 		return
 	}
 	defer resp.Body.Close()
-	log.Printf("Updated task %s status to %s", taskName, phase)
+	log.Info("Updated task status successfully", "taskName", taskName, "phase", phase)
 }
 
 // executeUpgrade simulates the firmware upgrade process.
@@ -127,12 +127,12 @@ func (s *AgentState) executeUpgrade(task *edgev1alpha1.FirmwareUpgradeTask) {
 	s.updateTaskStatus(task.Name, edgev1alpha1.TaskPhaseDownloading, "")
 
 	// 2. Simulate download and checksum verification
-	log.Printf("SIMULATE: Downloading firmware from %s", task.Spec.Firmware.URL)
+	log.Debug("SIMULATE: Downloading firmware", "url", task.Spec.Firmware.URL)
 	time.Sleep(2 * time.Second) // Simulate download time
 
 	// This is where you would do a real http.Get and sha256.Sum256
 	// For the simulation, we assume it's always correct.
-	log.Printf("SIMULATE: Verifying checksum %s... OK", task.Spec.Firmware.Checksum)
+	log.Debug(fmt.Sprintf("SIMULATE: Verifying checksum %s... OK", task.Spec.Firmware.Checksum))
 
 	// 3. Report Installing
 	s.updateTaskStatus(task.Name, edgev1alpha1.TaskPhaseInstalling, "")
@@ -140,21 +140,23 @@ func (s *AgentState) executeUpgrade(task *edgev1alpha1.FirmwareUpgradeTask) {
 
 	// 4. Persist new version to simulate reboot
 	if err := writeVersionToFile(task.Spec.Firmware.Version); err != nil {
-		log.Printf("ERROR: Failed to write new version file: %v", err)
+		log.Error(err, "Failed to write new version file")
 		s.updateTaskStatus(task.Name, edgev1alpha1.TaskPhaseFailed, err.Error())
 		return
 	}
 
 	// 5. Update in-memory state and report success
 	s.CurrentFirmwareVersion = task.Spec.Firmware.Version
-	log.Printf("SUCCESS: Upgrade to %s complete.", s.CurrentFirmwareVersion)
+	log.Info(fmt.Sprintf("SUCCESS: Upgrade to %s complete.", s.CurrentFirmwareVersion))
 	s.updateTaskStatus(task.Name, edgev1alpha1.TaskPhaseSucceeded, "")
 }
 
 func main() {
+	log.Init(log.NewOptions())
+
 	deviceID := os.Getenv("DEVICE_ID")
 	if deviceID == "" {
-		deviceID = "device-hello-001" // Use a more descriptive default
+		deviceID = "device-local-001" // Use a more descriptive default
 	}
 	gatewayURL := os.Getenv("GATEWAY_URL")
 	if gatewayURL == "" {
@@ -168,21 +170,22 @@ func main() {
 		Client:                 &http.Client{Timeout: 10 * time.Second},
 	}
 
-	log.Printf("anx-edge-agent started: deviceId=%s, gateway=%s, initialVersion=%s", state.DeviceID, state.GatewayURL, state.CurrentFirmwareVersion)
+	log.Info("anx-edge-agent started", "deviceId", state.DeviceID, "gateway", state.GatewayURL, "initialVersion", state.CurrentFirmwareVersion)
 
 	// Main agent loop
 	ticker := time.NewTicker(15 * time.Second)
 	defer ticker.Stop()
 
 	for ; ; <-ticker.C {
-		log.Println("--- Agent loop start ---")
+		fmt.Println()
+		log.Info("--- Agent loop start ---")
 		state.sendHeartbeat()
 		if task := state.checkForTask(); task != nil {
 			state.executeUpgrade(task)
 			// After an upgrade, immediately restart the loop to send a new heartbeat with the updated version
-			log.Println("--- Upgrade finished, restarting loop immediately ---")
+			log.Info("--- Upgrade finished, restarting loop immediately ---")
 			continue
 		}
-		log.Println("--- Agent loop end ---")
+		log.Info("--- Agent loop end ---")
 	}
 }

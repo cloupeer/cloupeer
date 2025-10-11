@@ -6,7 +6,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net"
 	"net/http"
 	"os"
@@ -21,6 +20,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 
 	edgev1alpha1 "github.com/anankix/anankix/pkg/apis/edge/v1alpha1"
+	"github.com/anankix/anankix/pkg/log"
 )
 
 // HeartbeatRequest defines the payload for the heartbeat endpoint.
@@ -83,14 +83,14 @@ func (g *Gateway) handleHeartbeat(w http.ResponseWriter, r *http.Request) {
 				Spec:       edgev1alpha1.PhysicalDeviceSpec{DeviceID: hb.DeviceID},
 			}
 			if err := g.K8sClient.Create(ctx, &pd); err != nil {
-				log.Printf("ERROR: failed to create PhysicalDevice: %v", err)
+				log.Error(err, "Failed to create PhysicalDevice", "pd", pd)
 				http.Error(w, "failed to create PhysicalDevice", http.StatusInternalServerError)
 				return
 			}
 			// refetch to get the full object
 			_ = g.K8sClient.Get(ctx, types.NamespacedName{Namespace: g.Namespace, Name: name}, &pd)
 		} else {
-			log.Printf("ERROR: failed to get PhysicalDevice: %v", err)
+			log.Error(err, "Failed to get PhysicalDevice", "namespace", g.Namespace, "name", name)
 			http.Error(w, "failed to get PhysicalDevice", http.StatusInternalServerError)
 			return
 		}
@@ -102,12 +102,12 @@ func (g *Gateway) handleHeartbeat(w http.ResponseWriter, r *http.Request) {
 	pd.Status.IPAddress = ip
 	pd.Status.CurrentFirmwareVersion = hb.CurrentFirmwareVersion
 	if err := g.K8sClient.Status().Patch(ctx, &pd, patch); err != nil {
-		log.Printf("ERROR: failed to update status: %v", err)
+		log.Error(err, "Failed to update status")
 		http.Error(w, "failed to update status", http.StatusInternalServerError)
 		return
 	}
 
-	log.Printf("Heartbeat received: deviceId=%s, version=%s, ip=%s", hb.DeviceID, hb.CurrentFirmwareVersion, ip)
+	log.Info("Heartbeat received", "deviceId", hb.DeviceID, "version", hb.CurrentFirmwareVersion, "ip", ip)
 	w.WriteHeader(http.StatusOK)
 	_ = json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
 }
@@ -126,7 +126,7 @@ func (g *Gateway) handleGetTask(w http.ResponseWriter, r *http.Request) {
 		ctrlclient.InNamespace(g.Namespace),
 		ctrlclient.MatchingLabels{"edge.anankix/deviceId": deviceID},
 	); err != nil {
-		log.Printf("ERROR: failed to list tasks for device %s: %v", deviceID, err)
+		log.Error(err, "Failed to list tasks for device", "deviceID", deviceID)
 		http.Error(w, "Failed to list tasks", http.StatusInternalServerError)
 		return
 	}
@@ -134,7 +134,7 @@ func (g *Gateway) handleGetTask(w http.ResponseWriter, r *http.Request) {
 	// Find the first pending task
 	for _, task := range taskList.Items {
 		if task.Status.Phase == "" || task.Status.Phase == edgev1alpha1.TaskPhasePending {
-			log.Printf("Task %s found for device %s", task.Name, deviceID)
+			log.Info("Task is found for device", "taskName", task.Name, "deviceID", deviceID)
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
 			_ = json.NewEncoder(w).Encode(task)
@@ -142,7 +142,7 @@ func (g *Gateway) handleGetTask(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	log.Printf("No pending tasks found for device %s", deviceID)
+	log.Info("No pending tasks found for device", "deviceID", deviceID)
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -165,7 +165,7 @@ func (g *Gateway) handleUpdateTaskStatus(w http.ResponseWriter, r *http.Request)
 	ctx := context.Background()
 	var task edgev1alpha1.FirmwareUpgradeTask
 	if err := g.K8sClient.Get(ctx, types.NamespacedName{Namespace: g.Namespace, Name: taskName}, &task); err != nil {
-		log.Printf("ERROR: failed to get task %s: %v", taskName, err)
+		log.Error(err, "Failed to get task", "taskName", taskName)
 		http.Error(w, "Task not found", http.StatusNotFound)
 		return
 	}
@@ -182,16 +182,18 @@ func (g *Gateway) handleUpdateTaskStatus(w http.ResponseWriter, r *http.Request)
 	}
 
 	if err := g.K8sClient.Status().Patch(ctx, &task, patch); err != nil {
-		log.Printf("ERROR: failed to update task status for %s: %v", taskName, err)
+		log.Error(err, "Failed to update task status", "taskName", taskName)
 		http.Error(w, "Failed to update task status", http.StatusInternalServerError)
 		return
 	}
 
-	log.Printf("Task %s status updated to %s", taskName, req.Phase)
+	log.Info("Task status updated", "taskName", taskName, "Phase", req.Phase)
 	w.WriteHeader(http.StatusOK)
 }
 
 func main() {
+	log.Init(log.NewOptions())
+
 	namespace := os.Getenv("NAMESPACE")
 	if namespace == "" {
 		namespace = "default"
@@ -199,18 +201,18 @@ func main() {
 
 	cfg, err := config.GetConfig()
 	if err != nil {
-		log.Fatalf("FATAL: failed to get k8s config: %v", err)
+		panic(fmt.Sprintf("FATAL: failed to get k8s config: %v", err))
 	}
 
 	scheme := runtime.NewScheme()
 	// IMPORTANT: Register both types with the scheme
 	if err := edgev1alpha1.AddToScheme(scheme); err != nil {
-		log.Fatalf("FATAL: failed to add scheme: %v", err)
+		panic(fmt.Sprintf("FATAL: failed to add scheme: %v", err))
 	}
 
 	k8sClient, err := ctrlclient.New(cfg, ctrlclient.Options{Scheme: scheme})
 	if err != nil {
-		log.Fatalf("FATAL: failed to create client: %v", err)
+		panic(fmt.Sprintf("FATAL: failed to create client: %v", err))
 	}
 
 	gateway := &Gateway{
@@ -232,8 +234,8 @@ func main() {
 	if v := os.Getenv("ADDR"); v != "" {
 		addr = v
 	}
-	log.Printf("anx-edge-gateway listening on %s (namespace=%s)", addr, namespace)
+	log.Info(fmt.Sprintf("anx-edge-gateway listening on %s (namespace=%s)", addr, namespace))
 	if err := http.ListenAndServe(addr, mux); err != nil {
-		log.Fatalf("FATAL: server error: %v", err)
+		panic(fmt.Sprintf("FATAL: server error: %v", err))
 	}
 }
