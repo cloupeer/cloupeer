@@ -11,7 +11,7 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-// Logger defines the standard logging interface for the Anankix project.
+// Logger defines the standard logging interface for the Cloupeer project.
 type Logger interface {
 	// Debug logs a message at DebugLevel.
 	Debug(msg string, keysAndValues ...any)

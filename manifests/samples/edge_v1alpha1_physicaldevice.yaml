@@ -1,9 +1,0 @@
-apiVersion: edge.anankix/v1alpha1
-kind: PhysicalDevice
-metadata:
-  labels:
-    app.kubernetes.io/name: anankix
-    app.kubernetes.io/managed-by: kustomize
-  name: physicaldevice-sample
-spec:
-  # TODO(user): Add fields here

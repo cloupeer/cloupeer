@@ -1,4 +1,4 @@
-# This kustomization.yaml defines the CRD "base" for the anankix project.
+# This kustomization.yaml defines the CRD "base" for the cloupeer project.
 # It aggregates all auto-generated CRD definitions from the ./bases directory.
 # This module is then consumed by the top-level 'installation' overlays.
 resources:

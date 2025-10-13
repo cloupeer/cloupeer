@@ -1,4 +1,4 @@
 resources:
   - ../../base
-  - ../../components/anx-operator/overlays/dev
-  - ../../components/anx-edge-gateway/overlays/dev
+  - ../../components/cpeer-controller-manager/overlays/dev
+  - ../../components/cpeer-edge-gateway/overlays/dev

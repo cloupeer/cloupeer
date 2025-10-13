@@ -1,4 +1,4 @@
-# Copyright 2025 The Anankix Authors.
+# Copyright 2025 The Cloupeer Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -32,9 +32,10 @@ export OUTPUT_DIR     := $(PROJECT_ROOT)/_output
 #@ Project Identity & Version
 # ------------------------------------------------------------------------------
 # The base for all container images.
-export IMAGE_TAG_BASE ?= anankix.io/anankix
+export PUBLIC_REGISTRY  := registry.cloupeer.io/cloupeer
+export PUSH_REGISTRY    := ghcr.io/cloupeer
 # The project version. Defaults to the output of 'git describe'.
-export VERSION        ?= $(shell git describe --tags --always --dirty)
+export VERSION          ?= $(shell git describe --tags --always --dirty)
 
 
 #@ Build Customization
@@ -61,8 +62,7 @@ export COMPONENTS  := $(filter-out $(EXCLUDE_COMPONENTS), $(ALL_COMPONENTS))
 # Format: <cmd-component-name>:<internal-directory-name>
 # If a component is not listed here, it is assumed its internal directory has the same name.
 export COMPONENT_PATH_MAP := \
-    anx-controller:controller
-    # anxctl is not listed, so it will default to 'internal/anxctl'
+    cpeer-controller-manager:controller
 
 # Define other common package paths that should always be included in a component's scope.
 export COMMON_PACKAGE_SCOPE := ./api/...
@@ -73,7 +73,7 @@ export COMMON_PACKAGE_SCOPE := ./api/...
 # This section defines all external build-time dependencies.
 
 # Versions
-export GOLANG_VERSION           ?= 1.25.1  # The Go version for Anankix
+export GOLANG_VERSION           ?= 1.25.1  # The Go version for Cloupeer
 export ENVTEST_K8S_VERSION      ?= 1.31.10 # The K8s version for envtest assets
 
 # Tool Versions
@@ -102,6 +102,6 @@ TOOLS := kustomize controller-gen envtest golangci-lint operator-sdk opm
 # ------------------------------------------------------------------------------
 # These are the full image tags derived from the base name and version.
 # They can be overridden on the command line if needed (e.g., make docker-push IMG=...).
-export IMG          ?= $(IMAGE_TAG_BASE):v$(VERSION)
-export BUNDLE_IMG   ?= $(IMAGE_TAG_BASE)-bundle:v$(VERSION)
-export CATALOG_IMG  ?= $(IMAGE_TAG_BASE)-catalog:v$(VERSION)
+export IMG          ?= 
+export BUNDLE_IMG   ?= 
+export CATALOG_IMG  ?= 

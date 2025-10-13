@@ -1,9 +1,7 @@
-# Anankix
+# Cloupeer
 
-**Pronunciation:** `uh-NAN-kix` (/əˈnæŋkɪks/), with the emphasis on the second syllable.
+Cloupeer is an open-source, cloud-native control plane for orchestrating large-scale networks of distributed peers, designed to bridge the gap between your cloud and your physical infrastructure in IoT and Edge Computing.
 
-Anankix is an open-source, cloud-native control plane designed for managing and orchestrating distributed physical infrastructure such as DePIN, IoT, and Edge networks. Built on the Kubernetes Operator pattern, Anankix extends the power of Kubernetes beyond the cloud to the physical world.
+Built on the Kubernetes Operator pattern, Cloupeer extends the power of Kubernetes beyond the data center to the physical world. It allows you to model your distributed peers—from IoT sensors to edge servers—as native Kubernetes Custom Resources (CRDs). This provides a unified and declarative API to automate the complete lifecycle of your hardware fleet.
 
-It allows you to model your physical devices as Kubernetes Custom Resources (CRDs), providing a unified and declarative API to automate the complete lifecycle management of large-scale hardware fleets.
-
-Anankix bridges the gap between cloud-native principles and physical infrastructure, transforming your collection of devices into a single cohesive, programmable, and observable system.
+Ultimately, Cloupeer transforms your vast collection of distributed peers into a single, cohesive, and programmable supercomputer, all managed with the battle-tested principles of cloud-native development.

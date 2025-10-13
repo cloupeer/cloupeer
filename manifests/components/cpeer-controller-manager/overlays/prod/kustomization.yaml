@@ -1,0 +1,27 @@
+# Adds namespace to all resources.
+namespace: cloupeer-system
+
+# Value of this field is prepended to the
+# names of all resources, e.g. a deployment named
+# "wordpress" becomes "alices-wordpress".
+# Note that it should also match with the prefix (text before '-') of the namespace
+# field above.
+namePrefix: cloupeer-
+
+# Labels to add to all resources and selectors.
+labels:
+- includeSelectors: true
+  pairs:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: cpeer-controller-manager
+    app.kubernetes.io/part-of: cloupeer
+
+# All resources that this overlay builds upon.
+resources:
+- ../../base
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+images:
+- name: cpeer-controller-manager
+  newName: registry.cloupeer.io/cloupeer/cpeer-controller-manager
+  newTag: v4fffaf1-dirty

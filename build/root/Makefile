@@ -1,4 +1,4 @@
-# Copyright 2025 The Anankix Authors.
+# Copyright 2025 The Cloupeer Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -115,11 +115,11 @@ $(TOOLS): %: $(TOOLS_DIR)/%-v$($(shell echo $* | tr 'a-z-' 'A-Z_')_VERSION) ## D
 $(TOOLS_DIR)/%:
 	@# The recipe calls a shell script, passing the tool name and version extracted from the target filename.
 	# For a target like "bin/controller-gen-v0.16.1", $(notdir $@) becomes "controller-gen-v0.16.1".
-	@./hack/install-tool.sh $(notdir $@)
+	@./hack/make-rules/install-tool.sh $(notdir $@)
 
 # Dynamically create an individual target for each component's Dockerfile generation.
 $(foreach comp,$(COMPONENTS),$(eval .PHONY: gen-dockerfile-$(comp)))
-$(foreach comp,$(COMPONENTS),$(eval gen-dockerfile-$(comp): ; @./hack/generate.sh dockerfile $(comp)))
+$(foreach comp,$(COMPONENTS),$(eval gen-dockerfile-$(comp): ; @./hack/make-rules/generate.sh dockerfile $(comp)))
 
 # ---
 # User-Facing Targets
@@ -153,11 +153,11 @@ help: ## Display this help.
 
 .PHONY: manifests
 manifests: $(CONTROLLER_GEN) ## Generate K8s manifests (CRDs, RBAC, etc.) in `config/`.
-	@./hack/generate.sh manifests
+	@./hack/make-rules/generate.sh manifests
 
 .PHONY: generate
 generate: $(CONTROLLER_GEN) ## Generate deepcopy code (zz_generated.deepcopy.go).
-	@./hack/generate.sh generate
+	@./hack/make-rules/generate.sh generate
 
 .PHONY: dockerfiles
 dockerfiles: $(addprefix gen-dockerfile-,$(COMPONENTS)) ## Generate all component Dockerfiles in `_output/images/`.
@@ -165,93 +165,93 @@ dockerfiles: $(addprefix gen-dockerfile-,$(COMPONENTS)) ## Generate all componen
 
 .PHONY: fmt
 fmt: ## Format Go code 
-	@./hack/verify.sh fmt
+	@./hack/make-rules/verify.sh fmt
 
 .PHONY: vet
 vet: ## Run go vet against code.
-	@./hack/verify.sh vet
+	@./hack/make-rules/verify.sh vet
 
 .PHONY: lint
 lint: $(GOLANGCI_LINT) ## Run golangci-lint linter. Use 'make lint BINS="comp"' for a single one.
-	@./hack/verify.sh lint $(BINS)
+	@./hack/make-rules/verify.sh lint $(BINS)
 
 .PHONY: lint-fix
 lint-fix: $(GOLANGCI_LINT) ## Run golangci-lint linter and perform fixes.
-	@./hack/verify.sh lint-fix $(BINS)
+	@./hack/make-rules/verify.sh lint-fix $(BINS)
 
 .PHONY: test
 test: manifests generate fmt vet $(ENVTEST) ## Run unit and integration tests (excluding e2e).
-	@./hack/test.sh unit $(BINS)
+	@./hack/make-rules/test.sh unit $(BINS)
 
 .PHONY: test-e2e
 test-e2e: ## Run end-to-end tests (requires a running cluster).
-	@./hack/test.sh e2e $(BINS)
+	@./hack/make-rules/test.sh e2e $(BINS)
 
 
 ##@ Build
 
 .PHONY: build
 build: manifests generate fmt vet ## Build all component binaries. All: 'make build'. Specific: 'make build BINS="comp1 comp2"'.
-	@./hack/build.sh build $(BINS)
+	@./hack/make-rules/build.sh build $(BINS)
 
 .PHONY: run
 run: manifests generate fmt vet ## Run a component. Usage: 'make run <component_name>'.
-	@./hack/build.sh run $(component_arg)
+	@./hack/make-rules/build.sh run $(component_arg)
 
 .PHONY: docker-build
 docker-build: dockerfiles ## Build a container image. Usage: 'make docker-build <component_name>'.
-	@./hack/build.sh docker-build $(component_arg)
+	@./hack/make-rules/build.sh docker-build $(component_arg)
 
 .PHONY: docker-push
 docker-push: ## Push a container image. Usage: 'make docker-push <component_name>'.
-	@./hack/build.sh docker-push $(component_arg)
+	@./hack/make-rules/build.sh docker-push $(component_arg)
 
 .PHONY: docker-buildx
 docker-buildx: dockerfiles ## Build and push a multi-arch container image. Usage: 'make docker-buildx <component_name>'.
-	@./hack/build.sh docker-buildx $(component_arg)
+	@./hack/make-rules/build.sh docker-buildx $(component_arg)
 
 
 ##@ Deployment
 
 .PHONY: install
 install: manifests $(KUSTOMIZE) ## Install CRDs into the K8s cluster.
-	@./hack/deploy.sh install
+	@./hack/make-rules/deploy.sh install
 
 .PHONY: uninstall
 uninstall: manifests $(KUSTOMIZE) ## Uninstall CRDs from the K8s cluster.
-	@./hack/deploy.sh uninstall
+	@./hack/make-rules/deploy.sh uninstall
 
 .PHONY: deploy
 deploy: manifests $(KUSTOMIZE) ## Deploy controller to the K8s cluster.
-	@./hack/deploy.sh deploy $(component_arg)
+	@./hack/make-rules/deploy.sh deploy $(component_arg)
 
 .PHONY: undeploy
 undeploy: $(KUSTOMIZE) ## Undeploy controller from the K8s cluster.
-	@./hack/deploy.sh undeploy $(component_arg)
+	@./hack/make-rules/deploy.sh undeploy $(component_arg)
 
 
 ##@ Release
 
 .PHONY: installer
 installer: manifests generate $(KUSTOMIZE) ## Generate a consolidated install.yaml in `_output/release/`.
-	@./hack/release.sh installer $(component_arg)
+	@./hack/make-rules/release.sh installer $(component_arg)
 
 .PHONY: bundle
-bundle: manifests generate $(KUSTOMIZE) $(OPERATOR_SDK) ## Generate bundle manifests and metadata.
-	@./hack/release.sh bundle $(component_arg)
+bundle: manifests generate $(KUSTOMIZE) ## Generate bundle manifests and metadata.
+	@./hack/make-rules/release.sh bundle $(component_arg)
 
 .PHONY: bundle-build
 bundle-build: ## Build the bundle image.
-	@./hack/release.sh bundle-build $(component_arg)
+	@./hack/make-rules/release.sh bundle-build $(component_arg)
 
 .PHONY: bundle-push
 bundle-push: ## Push the bundle image.
-	@./hack/release.sh bundle-push $(component_arg)
+	@./hack/make-rules/release.sh bundle-push $(component_arg)
 
 .PHONY: catalog-build
 catalog-build: $(OPM) ## Build a catalog image.
-	@./hack/release.sh catalog-build
+	@./hack/make-rules/release.sh catalog-build
 
 .PHONY: catalog-push
 catalog-push: ## Push a catalog image.
-	@./hack/release.sh catalog-push
+	@./hack/make-rules/release.sh catalog-push
