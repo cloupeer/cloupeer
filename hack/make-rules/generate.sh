@@ -71,7 +71,7 @@ generate_manifests() {
         rbac:roleName=manager-role \
         crd \
         webhook \
-        paths="./pkg/apis/...;./internal/cloud/controller/..." \
+        paths="./pkg/apis/...;./internal/controller/..." \
         output:crd:artifacts:config=${crd_bases_dir} \
         output:rbac:stdout > manifests/components/cpeer-controller-manager/base/generated.manager-role.yaml \
         output:webhook:dir=manifests/base/webhook

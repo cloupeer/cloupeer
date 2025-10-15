@@ -39,41 +39,69 @@ readonly GOLANGCI_LINT="${GOLANGCI_LINT:-${PROJECT_ROOT}/bin/golangci-lint}"
 readonly COMPONENT_PATH_MAP="${COMPONENT_PATH_MAP:-}"
 readonly COMMON_PACKAGE_SCOPE="${COMMON_PACKAGE_SCOPE:-./api/...}"
 
-# _get_packages_for_component resolves all relevant Go packages for a given component.
-_get_packages_for_component() {
-    local comp="$1"
-    local packages=()
+# _get_packages_for_component resolves all relevant Go packages for a given set
+# of components. It accepts multiple component names as arguments and returns a
+# unique, space-separated list of package paths.
+_get_packages_for_components() {
+    # 1. Initialize an array to accumulate all found package paths.
+    local all_packages=()
 
-    # 1. Add the component's cmd directory.
-    packages+=("./cmd/${comp}/...")
+    # 2. Loop through all component names passed as arguments to the function.
+    for comp in "$@"; do
+        # Add the component's cmd directory.
+        all_packages+=("./cmd/${comp}/...")
 
-    # 2. Resolve the internal path using the map, with a fallback to the component name.
-    local internal_path="${comp}" # Default to the component name itself.
-    for mapping in ${COMPONENT_PATH_MAP}; do
-        local cmd_name="${mapping%%:*}"  # Get the part before the colon
-        local internal_name="${mapping##*:}" # Get the part after the colon
-        if [[ "${cmd_name}" == "${comp}" ]]; then
-            internal_path="${internal_name}"
-            break
+        # Resolve the 'internal' path using the map, with a fallback to the component name.
+        local internal_path=""
+        local mapping_found=false
+        # Rule 1: Check for a direct mapping in COMPONENT_PATH_MAP. This has the highest priority.
+        for mapping in ${COMPONENT_PATH_MAP}; do
+            local cmd_name="${mapping%%:*}"  # Get the part before the colon
+            local internal_name="${mapping##*:}" # Get the part after the colon
+            if [[ "${cmd_name}" == "${comp}" ]]; then
+                internal_path="${internal_name}"
+                mapping_found=true
+                break
+            fi
+        done
+
+        # If no mapping was found, apply the fallback naming convention rules.
+        if ! ${mapping_found}; then
+            if [[ "${comp}" == "cpeer-"* ]]; then
+                # Rule 2: Component name has the "cpeer-" prefix.
+                # Remove the "cpeer-" prefix. e.g., "cpeer-edge-agent" -> "edge-agent"
+                local path_without_prefix="${comp#cpeer-}"
+                # Remove all remaining hyphens. e.g., "edge-agent" -> "edgeagent"
+                internal_path="${path_without_prefix//-/}"
+            else
+                # Rule 3: Component name does not have the "cpeer-" prefix.
+                # Use the component name directly. e.g., "cpeerctl" -> "cpeerctl"
+                internal_path="${comp}"
+            fi
+        fi
+
+        # Find matching directories within './internal'.
+        # Using 'mapfile' (or 'readarray') is a safer way to read find's output
+        # into an array, correctly handling paths with special characters.
+        local found_paths
+        mapfile -t found_paths < <(find ./internal -type d -name "${internal_path}" 2>/dev/null)
+
+        if [[ ${#found_paths[@]} -gt 0 ]]; then
+            for path in "${found_paths[@]}"; do
+                all_packages+=("${path}/...")
+            done
+        else
+            echo "Warning: No internal package found for component '${comp}' (resolved internal name: '${internal_path}')" >&2
         fi
     done
 
-    local found_paths
-    found_paths=$(find ./internal -type d -name "${internal_path}")
-    
-    if [[ -n "${found_paths}" ]]; then
-        for path in ${found_paths}; do
-            packages+=("${path}/...")
-        done
-    else
-        echo "Warning: No internal package found for component '${comp}' (internal name: '${internal_path}')" >&2
-    fi
+    # 3. Combine the discovered packages with the common packages, then de-duplicate.
+    local final_packages
+    # The tr/sort/tr pipeline is a robust way to get a unique list of space-separated items.
+    final_packages=$(echo "${all_packages[@]}" "${COMMON_PACKAGE_SCOPE[@]}" | tr ' ' '\n' | sort -u | tr '\n' ' ')
 
-    # 3. Add any common packages.
-    packages+=(${COMMON_PACKAGE_SCOPE})
-
-    # Return the space-separated list of packages.
-    echo "${packages[*]}"
+    # 4. Return the final, clean list of packages.
+    echo "${final_packages}"
 }
 
 
@@ -148,10 +176,15 @@ main() {
                 packages_to_check=("./...")
             else
                 info "Scope: Specified components (${components[*]})"
-                for comp in "${components[@]}"; do
-                    packages_to_check+=($(_get_packages_for_component "${comp}"))
-                done
+                # The improved function handles all components at once, so we can
+                # replace the for-loop with a single, clean function call.
+                # The result is captured into an array.
+                packages_to_check=($(_get_packages_for_components "${components[@]}"))
             fi
+
+            info "==============================="
+            info "Packages to check: ${packages_to_check[*]}"
+            info "==============================="
 
             if [[ "$target" == "lint-fix" ]]; then
                 run_lint_fix "${packages_to_check[@]}"
