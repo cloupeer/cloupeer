@@ -79,7 +79,7 @@ export ENVTEST_K8S_VERSION      ?= 1.31.10 # The K8s version for envtest assets
 # Tool Versions
 export KUSTOMIZE_VERSION        ?= 5.4.3
 export CONTROLLER_GEN_VERSION   ?= 0.16.1
-export ENVTEST_VERSION          ?= 0.19.0  # Use a specific version number
+export ENVTEST_VERSION          ?= # Use a specific version number
 export GOLANGCI_LINT_VERSION    ?= 1.64.8
 export OPERATOR_SDK_VERSION     ?= 1.39.2
 export OPM_VERSION              ?= 1.23.0
@@ -89,7 +89,7 @@ export OPM_VERSION              ?= 1.23.0
 # These variables construct the full path to the versioned tool binaries.
 export KUSTOMIZE        := $(TOOLS_DIR)/kustomize-v$(KUSTOMIZE_VERSION)
 export CONTROLLER_GEN   := $(TOOLS_DIR)/controller-gen-v$(CONTROLLER_GEN_VERSION)
-export ENVTEST          := $(TOOLS_DIR)/setup-envtest-v$(ENVTEST_VERSION)
+export ENVTEST          := $(TOOLS_DIR)/setup-envtest
 export GOLANGCI_LINT    := $(TOOLS_DIR)/golangci-lint-v$(GOLANGCI_LINT_VERSION)
 export OPERATOR_SDK     := $(TOOLS_DIR)/operator-sdk-v$(OPERATOR_SDK_VERSION)
 export OPM              := $(TOOLS_DIR)/opm-v$(OPM_VERSION)

@@ -23,7 +23,7 @@
 
 # Source the common prelude script to set up the environment and helpers.
 # shellcheck source=lib/prelude.sh
-source "$(dirname "${BASH_SOURCE[0]}")/lib/prelude.sh"
+source "${PROJECT_ROOT}/hack/lib/prelude.sh"
 
 # ==============================================================================
 # Consumed Environment Variables (from build/config.mk)
@@ -78,8 +78,8 @@ case "$TOOL_NAME" in
         go install "sigs.k8s.io/controller-tools/cmd/controller-gen@v${TOOL_VERSION}"
         mv "${gobin}/controller-gen" "${TARGET_FILE}"
         ;;
-    envtest)
-        go install "sigs.k8s.io/controller-runtime/tools/setup-envtest@v${TOOL_VERSION}"
+    setup-envtest)
+        go install "sigs.k8s.io/controller-runtime/tools/setup-envtest@latest"
         mv "${gobin}/setup-envtest" "${TARGET_FILE}"
         ;;
     golangci-lint)

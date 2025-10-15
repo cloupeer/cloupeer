@@ -23,7 +23,7 @@
 
 # Source the common prelude script to set up the environment and helpers.
 # shellcheck source=lib/prelude.sh
-source "$(dirname "${BASH_SOURCE[0]}")/lib/prelude.sh"
+source "${PROJECT_ROOT}/hack/lib/prelude.sh"
 
 # ==============================================================================
 # Consumed Environment Variables (from build/config.mk)
@@ -71,7 +71,7 @@ generate_manifests() {
         rbac:roleName=manager-role \
         crd \
         webhook \
-        paths="./pkg/apis/...;./internal/controller/..." \
+        paths="./pkg/apis/...;./internal/cloud/controller/..." \
         output:crd:artifacts:config=${crd_bases_dir} \
         output:rbac:stdout > manifests/components/cpeer-controller-manager/base/generated.manager-role.yaml \
         output:webhook:dir=manifests/base/webhook

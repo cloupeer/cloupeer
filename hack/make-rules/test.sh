@@ -23,7 +23,7 @@
 
 # Source the common prelude script to set up the environment and helpers.
 # shellcheck source=lib/prelude.sh
-source "$(dirname "${BASH_SOURCE[0]}")/lib/prelude.sh"
+source "${PROJECT_ROOT}/hack/lib/prelude.sh"
 
 # ==============================================================================
 # Consumed Environment Variables (from build/config.mk)

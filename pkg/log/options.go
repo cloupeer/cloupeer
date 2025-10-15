@@ -64,10 +64,16 @@ func (o *Options) Validate() []error {
 // AddFlags binds command-line flags to the Options fields.
 func (o *Options) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&o.Name, "log.name", o.Name, "An optional name for the logger.")
-	fs.StringVar(&o.Level, "log.level", o.Level, "The minimum log level to output (e.g., 'debug', 'info', 'warn', 'error').")
 	fs.StringVar(&o.Format, "log.format", o.Format, "The log output format ('json' or 'console').")
 	fs.BoolVar(&o.EnableColor, "log.enable-color", o.EnableColor, "Enable colorized output for the console format.")
-	fs.BoolVar(&o.DisableCaller, "log.disable-caller", o.DisableCaller, "Disable the caller field in logs (file and line number).")
 	fs.IntVar(&o.CallerSkip, "log.caller-skip", o.CallerSkip, "The number of caller frames to skip.")
-	fs.StringSliceVar(&o.OutputPaths, "log.output-paths", o.OutputPaths, "A list of log output paths (e.g., 'stdout', '/var/log/app.log').")
+
+	usage := "The minimum log level to output (e.g., 'debug', 'info', 'warn', 'error')."
+	fs.StringVar(&o.Level, "log.level", o.Level, usage)
+
+	usage = "Disable the caller field in logs (file and line number)."
+	fs.BoolVar(&o.DisableCaller, "log.disable-caller", o.DisableCaller, usage)
+
+	usage = "A list of log output paths (e.g., 'stdout', '/var/log/app.log')."
+	fs.StringSliceVar(&o.OutputPaths, "log.output-paths", o.OutputPaths, usage)
 }
