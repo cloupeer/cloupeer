@@ -70,11 +70,17 @@ build_binary() {
         "${main_path}"
 }
 
-# run_controller runs a single component controller locally.
-run_controller() {
+# This function runs a single component controller locally, forwarding all extra arguments.
+run_component() {
     local component_name="$1"
-    info "Running component '${component_name}' locally..."
-    go run "${PROJECT_ROOT}/cmd/${component_name}/main.go"
+    # 'shift' is a shell command that discards the first argument ($1),
+    # so that "$@" will now contain all subsequent arguments.
+    shift
+    
+    info "Running component '${component_name}' locally with args: $*"
+    
+    # "$@" expands to all remaining arguments, correctly quoted.
+    go run "${PROJECT_ROOT}/cmd/${component_name}/main.go" "$@"
 }
 
 # build_docker_image builds a container image for a single component.
@@ -164,8 +170,9 @@ main() {
             ;;
 
         run)
-            _require_one_component "$target" "${args[@]}"
-            run_controller "${args[0]}"
+            _require_one_component "$target" "${args[0]}"
+            # Pass all script arguments to the run_component function
+            run_component "${args[@]}"
             ;;
 
         docker-build)

@@ -3,8 +3,9 @@ package main
 import (
 	"os"
 
-	"cloupeer.io/cloupeer/cmd/cpeer-controller-manager/app"
 	"k8s.io/apiserver/pkg/server"
+
+	"cloupeer.io/cloupeer/cmd/cpeer-controller-manager/app"
 )
 
 func main() {

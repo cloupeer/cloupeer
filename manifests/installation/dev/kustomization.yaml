@@ -1,4 +1,4 @@
 resources:
   - ../../base
   - ../../components/cpeer-controller-manager/overlays/dev
-  - ../../components/cpeer-edge-gateway/overlays/dev
+  - ../../components/cpeer-hub/overlays/dev

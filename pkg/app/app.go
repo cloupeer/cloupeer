@@ -6,7 +6,6 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/onexstack/onexstack/pkg/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
@@ -15,6 +14,7 @@ import (
 	cliflag "k8s.io/component-base/cli/flag"
 	"k8s.io/component-base/term"
 
+	"cloupeer.io/cloupeer/pkg/log"
 	"cloupeer.io/cloupeer/pkg/version"
 )
 
@@ -242,8 +242,8 @@ func (app *App) runCommand(cmd *cobra.Command, args []string) error {
 	app.initializeLogger()
 
 	if !app.silence {
-		log.Infow("Starting application", "name", app.name, "version", version.Get().ToJSON())
-		log.Infow("Golang settings", "GOGC", os.Getenv("GOGC"), "GOMAXPROCS", os.Getenv("GOMAXPROCS"), "GOTRACEBACK", os.Getenv("GOTRACEBACK"))
+		log.Info("Starting application", "name", app.name, "version", version.Get().ToJSON())
+		log.Info("Golang settings", "GOGC", os.Getenv("GOGC"), "GOMAXPROCS", os.Getenv("GOMAXPROCS"), "GOTRACEBACK", os.Getenv("GOTRACEBACK"))
 		if !app.noConfig {
 			PrintConfig()
 		} else if app.options != nil {
@@ -306,22 +306,23 @@ func (app *App) initializeLogger() {
 	logOptions := log.NewOptions()
 
 	// Configure logging options from viper
-	if viper.IsSet("log.disable-caller") {
-		logOptions.DisableCaller = viper.GetBool("log.disable-caller")
-	}
-	if viper.IsSet("log.disable-stacktrace") {
-		logOptions.DisableStacktrace = viper.GetBool("log.disable-stacktrace")
-	}
 	if viper.IsSet("log.level") {
 		logOptions.Level = viper.GetString("log.level")
 	}
+
 	if viper.IsSet("log.format") {
 		logOptions.Format = viper.GetString("log.format")
 	}
+
+	if viper.IsSet("log.disable-caller") {
+		logOptions.DisableCaller = viper.GetBool("log.disable-caller")
+	}
+
 	if viper.IsSet("log.output-paths") {
 		logOptions.OutputPaths = viper.GetStringSlice("log.output-paths")
 	}
 
 	// Initialize logging with custom context extractors
-	log.Init(logOptions, log.WithContextExtractor(app.contextExtractors))
+	// log.Init(logOptions, log.WithContextExtractor(app.contextExtractors))
+	log.Init(logOptions)
 }

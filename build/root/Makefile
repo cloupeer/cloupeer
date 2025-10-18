@@ -195,8 +195,8 @@ build: manifests generate fmt vet ## Build all component binaries. All: 'make bu
 	@./hack/make-rules/build.sh build $(BINS)
 
 .PHONY: run
-run: manifests generate fmt vet ## Run a component. Usage: 'make run <component_name>'.
-	@./hack/make-rules/build.sh run $(component_arg)
+run: manifests generate fmt vet ## Run a component. Usage: 'make run <component_name> ARGS="--arg1 val1"'
+	@./hack/make-rules/build.sh run $(component_arg) $(ARGS)
 
 .PHONY: docker-build
 docker-build: dockerfiles ## Build a container image. Usage: 'make docker-build <component_name>'.
