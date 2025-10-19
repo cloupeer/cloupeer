@@ -1,5 +1,5 @@
 # This kustomization includes all foundational resources for the project.
 resources:
   - crd
-  # - rbac
+  - rbac
   - namespace.yaml
