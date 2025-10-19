@@ -1,0 +1,5 @@
+resources:
+- deployment.yaml
+- generated.manager-role.yaml
+- rbac.yaml
+- service.yaml

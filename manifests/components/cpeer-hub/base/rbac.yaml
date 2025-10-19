@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: hub
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: hub-role
+rules:
+# Permissions for hub to interact with Device and FirmwareUpgrade CRs
+- apiGroups: ["iot.cloupeer.io"]
+  resources: ["devices"]
+  verbs: ["get", "list", "watch", "create", "patch", "update"]
+- apiGroups: ["firmware.cloupeer.io"]
+  resources: ["firmwareupgrades"]
+  verbs: ["get", "list", "watch", "patch", "update"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: hub-rolebinding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: hub-role
+subjects:
+- kind: ServiceAccount
+  name: hub
+  # Namespace will be set by Kustomize overlay
+  namespace: system

@@ -70,6 +70,9 @@ run_deploy() {
 
     cd "${PROJECT_ROOT}"
 
+    # We need to get the real version from the environment
+    local version_tag="v${VERSION}"
+
     if [[ "${component_name}" == "all" ]]; then
         info "Deploying all components for environment '${env_name}'..."
         info "    Setting images for all components..."
@@ -80,10 +83,15 @@ run_deploy() {
                 error "Kustomize directory not found for component '${component}' at: ${component_kustomize_path}"
             fi
 
-            local img_tag="${IMG:-${PUBLIC_REGISTRY}/${component}:v${VERSION}}"
+            local img_tag="${IMG:-${PUBLIC_REGISTRY}/${component}:${version_tag}}"
             info "        - Setting image for '${component}' to: ${img_tag}"
-            
-            (cd "${component_kustomize_path}" && "${KUSTOMIZE}" edit set image "${component}"="${img_tag}")
+            info "        - Setting version label to: ${version_tag}"
+
+            (
+                cd "${component_kustomize_path}"
+                "${KUSTOMIZE}" edit set image "${component}"="${img_tag}"
+                "${KUSTOMIZE}" edit set label "app.kubernetes.io/version:${version_tag}"
+            )
         done
         
         kustomize_path="manifests/installation/${env_name}"
@@ -96,10 +104,15 @@ run_deploy() {
             error "Kustomize directory not found for component '${component_name}' at: ${kustomize_path}"
         fi
 
-        local img_tag="${IMG:-${PUBLIC_REGISTRY}/${component_name}:v${VERSION}}"
+        local img_tag="${IMG:-${PUBLIC_REGISTRY}/${component_name}:${version_tag}}"
         info "    Setting image to: ${img_tag}"
-        
-        (cd "${kustomize_path}" && "${KUSTOMIZE}" edit set image "${component_name}"="${img_tag}")
+        info "    Setting version label to: ${version_tag}"
+
+        (
+            cd "${kustomize_path}"
+            "${KUSTOMIZE}" edit set image "${component_name}"="${img_tag}"
+            "${KUSTOMIZE}" edit set label "app.kubernetes.io/version:${version_tag}"
+        )
     fi
 
     info "    Applying manifests from: ${kustomize_path}"

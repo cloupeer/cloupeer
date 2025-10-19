@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: controller-manager-metrics-service
+spec:
+  selector:
+    app.kubernetes.io/name: cpeer-controller-manager
+  ports:
+  - name: https
+    port: 8443 # Default port for Prometheus metrics when TLS is enabled
+    targetPort: https
+    protocol: TCP
+  - name: health
+    port: 9001
+    targetPort: health
+    protocol: TCP

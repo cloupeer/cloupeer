@@ -208,8 +208,8 @@ func (a *Agent) executeUpgrade(ctx context.Context, task *firmwarev1alpha1.Firmw
 	case <-time.After(upgradeDuration):
 		// Download finished
 	case <-ctx.Done():
-		log.Warn("Upgrade cancelled because agent is shutting down.")
-		a.updateTaskStatus(ctx, task.Name, firmwarev1alpha1.UpgradePhaseFailed, "Upgrade cancelled by agent shutdown.")
+		log.Warn("Upgrade canceled because agent is shutting down.")
+		a.updateTaskStatus(ctx, task.Name, firmwarev1alpha1.UpgradePhaseFailed, "Upgrade canceled by agent shutdown.")
 		return
 	}
 

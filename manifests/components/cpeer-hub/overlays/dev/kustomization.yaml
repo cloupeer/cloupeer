@@ -10,8 +10,7 @@ namePrefix: cloupeer-
 # Add common labels to all resources and their selectors
 labels:
 - pairs:
-    control-plane: controller-manager
-    app.kubernetes.io/name: cpeer-controller-manager
+    app.kubernetes.io/name: cpeer-hub
     app.kubernetes.io/part-of: cloupeer
     app.kubernetes.io/version: v0.1.0 # It's good practice to label with version
     app.kubernetes.io/managed-by: kustomize
@@ -20,8 +19,8 @@ labels:
 
 # The most important part for overlays: image transformation
 images:
-- name: controller-manager-placeholder # This must match the placeholder name in the base deployment.yaml
-  newName: registry.cloupeer.io/cloupeer/cpeer-controller-manager # The real registry path
+- name: hub-placeholder # This must match the placeholder name in the base deployment.yaml
+  newName: registry.cloupeer.io/cloupeer/cpeer-hub # The real registry path
   newTag: v0.1.0 # The specific tag for this deployment
 
 # All resources that this overlay builds upon.

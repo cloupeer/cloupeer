@@ -1,0 +1,13 @@
+apiVersion: rbac.authorization.k8s.io/v1
+# We use 'Role' here because editing should be restricted to a specific namespace.
+kind: Role
+metadata:
+  # The name doesn't need a namespace as it will be applied within one.
+  name: cloupeer-editor
+rules:
+- apiGroups: ["iot.cloupeer.io"]
+  resources: ["devices"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["firmware.cloupeer.io"]
+  resources: ["firmwareupgrades"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]

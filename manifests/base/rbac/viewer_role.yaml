@@ -1,0 +1,11 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cloupeer-viewer
+rules:
+- apiGroups: ["iot.cloupeer.io"]
+  resources: ["devices"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["firmware.cloupeer.io"]
+  resources: ["firmwareupgrades"]
+  verbs: ["get", "list", "watch"]

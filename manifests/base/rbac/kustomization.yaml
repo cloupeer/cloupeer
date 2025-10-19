@@ -1,2 +1,3 @@
 resources:
-# - 
+- viewer_role.yaml
+- editor_role.yaml

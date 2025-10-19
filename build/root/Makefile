@@ -222,7 +222,7 @@ uninstall: manifests $(KUSTOMIZE) ## Uninstall CRDs from the K8s cluster.
 	@./hack/make-rules/deploy.sh uninstall
 
 .PHONY: deploy
-deploy: manifests $(KUSTOMIZE) ## Deploy controller to the K8s cluster.
+deploy: install $(KUSTOMIZE) ## Deploy controller to the K8s cluster.
 	@./hack/make-rules/deploy.sh deploy $(component_arg)
 
 .PHONY: undeploy
