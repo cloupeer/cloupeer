@@ -2,4 +2,5 @@
 # It includes all CRD manifest files in this directory.
 resources:
   - firmware.cloupeer.io_firmwareupgrades.yaml
+  - iot.cloupeer.io_devicemodels.yaml
   - iot.cloupeer.io_devices.yaml

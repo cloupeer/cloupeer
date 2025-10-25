@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -117,10 +118,27 @@ func (r *FirmwareUpgradeReconciler) Reconcile(ctx context.Context, req controlle
 	log.Info("Performing status aggregation for FirmwareUpgrade task.", "phase", upgradeTask.Status.Phase)
 
 	var deviceList iotv1alpha1.DeviceList
-	selector, _ := metav1.LabelSelectorAsSelector(upgradeTask.Spec.DeviceSelector)
-	if err := r.List(ctx, &deviceList, &client.ListOptions{LabelSelector: selector}); err != nil {
+	selector, err := metav1.LabelSelectorAsSelector(upgradeTask.Spec.DeviceSelector)
+	if err != nil {
+		// This case should be handled during initial status setup as well
+		log.Error(err, "Invalid DeviceSelector during aggregation")
+		// Update status to Failed if not already terminal
+		if upgradeTask.Status.Phase != firmwarev1alpha1.UpgradePhaseFailed {
+			patch := client.MergeFrom(upgradeTask.DeepCopy())
+			upgradeTask.Status.Phase = firmwarev1alpha1.UpgradePhaseFailed
+			// Add a condition explaining the failure
+			// meta.SetStatusCondition(...)
+			if patchErr := r.Status().Patch(ctx, &upgradeTask, patch); patchErr != nil {
+				log.Error(patchErr, "Failed to patch status to Failed due to invalid selector")
+				return controllerruntime.Result{}, patchErr // Return error to retry patch
+			}
+		}
+		return controllerruntime.Result{}, nil // Stop reconciliation for this invalid task
+	}
+
+	if err := r.List(ctx, &deviceList, client.InNamespace(req.Namespace), &client.ListOptions{LabelSelector: selector}); err != nil {
 		log.Error(err, "Failed to list target devices for status aggregation")
-		return controllerruntime.Result{}, err
+		return controllerruntime.Result{}, err // Requeue on list error
 	}
 
 	// 7. Core upgrade logic: Iterate through devices and "command" them to upgrade
@@ -129,21 +147,40 @@ func (r *FirmwareUpgradeReconciler) Reconcile(ctx context.Context, req controlle
 	// The DeviceReconciler will then see this change and act upon it.
 	var successful, failed, inProgress int32
 
+	// Recalculate Total in case devices were added/removed since task start
+	currentTargetDeviceCount := int32(len(deviceList.Items))
+
 	for _, device := range deviceList.Items {
+		reportedVersion := getReportedFirmwareVersion(&device.Status) // Use helper function
+
 		// Check if device is already on the target version
-		if device.Status.ReportedFirmwareVersion == upgradeTask.Spec.Version {
+		if reportedVersion == upgradeTask.Spec.Version {
 			successful++
 		} else {
-			inProgress++
+			// Determine if it's 'Failed' or 'Upgrading' based on Device Conditions
+			isFailed := meta.IsStatusConditionTrue(device.Status.Conditions, "FirmwareUpgradeFailed") // Define your condition types
+			isUpgrading := meta.IsStatusConditionTrue(device.Status.Conditions, "UpgradingFirmware")
+
+			if isFailed {
+				failed++
+			} else if isUpgrading { // Only count as 'inProgress' if explicitly marked as upgrading
+				inProgress++
+			} else {
+				// Device hasn't reached target version, isn't marked as failed, isn't marked as upgrading.
+				// This might be pending, or the DeviceController hasn't set the condition yet.
+				// We can count it as pending/inProgress based on desired logic. Let's count as inProgress for now.
+				inProgress++
+			}
 		}
 	}
 
 	patch := client.MergeFrom(upgradeTask.DeepCopy())
 
-	// 8. Update the FirmwareUpgrade status with the current progress
+	// Update the FirmwareUpgrade status with the current progress
+	upgradeTask.Status.Total = currentTargetDeviceCount // Update total count
 	upgradeTask.Status.Succeeded = successful
 	upgradeTask.Status.Failed = failed
-	upgradeTask.Status.Upgrading = inProgress
+	upgradeTask.Status.Upgrading = inProgress // Devices not succeeded or failed
 
 	// This happens when no devices are left in the "upgrading" state.
 	isTaskComplete := (successful + failed) == upgradeTask.Status.Total
@@ -232,4 +269,17 @@ func (r *FirmwareUpgradeReconciler) findFirmwareUpgradesForDevice(ctx context.Co
 		log.Info("Device change triggered reconciliation for FirmwareUpgrades", "device", changedDevice.Name, "upgradeCount", len(requests))
 	}
 	return requests
+}
+
+// Helper function to get reported firmware version from DeviceStatus.Twins
+func getReportedFirmwareVersion(status *iotv1alpha1.DeviceStatus) string {
+	if status == nil {
+		return ""
+	}
+	for _, twin := range status.Twins {
+		if twin.PropertyName == "firmwareVersion" { // Assuming "firmwareVersion" is the standard name
+			return twin.Reported.Value
+		}
+	}
+	return "" // Return empty if not found
 }

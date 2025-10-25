@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -54,34 +55,58 @@ func (r *DeviceReconciler) Reconcile(ctx context.Context, req controllerruntime.
 		return controllerruntime.Result{}, err
 	}
 
+	var desiredFirmwareVersion string
+	var firmwareProperty *iotv1alpha1.DeviceProperty // Find the firmware property in Spec
+	for i := range device.Spec.Properties {
+		if device.Spec.Properties[i].Name == "firmwareVersion" { // Assuming "firmwareVersion" is the standard name
+			firmwareProperty = &device.Spec.Properties[i]
+			desiredFirmwareVersion = firmwareProperty.Desired.Value
+			break
+		}
+	}
+
+	var reportedFirmwareVersion string
+	for _, twin := range device.Status.Twins {
+		if twin.PropertyName == "firmwareVersion" {
+			reportedFirmwareVersion = twin.Reported.Value
+			break
+		}
+	}
+
 	requeueAfter := 2 * time.Minute
-	desiredVersion := device.Spec.FirmwareVersion
-	reportedVersion := device.Status.ReportedFirmwareVersion
 	// If no desired version is set, or if versions match, no action is needed.
-	if desiredVersion == "" || desiredVersion == reportedVersion {
+	if desiredFirmwareVersion == "" || desiredFirmwareVersion == reportedFirmwareVersion {
 		// You might want to add logic here to clean up any "Upgrading" conditions if they exist.
 		// For now, we'll just log and finish.
-		log.Info("Firmware version is up to date or not specified.", "desired", desiredVersion, "reported", reportedVersion)
+		log.Info("Firmware version is up to date or not specified.", "desired", desiredFirmwareVersion, "reported", reportedFirmwareVersion)
+		if meta.IsStatusConditionTrue(device.Status.Conditions, "UpgradingFirmware") {
+			log.Info("Removing UpgradingFirmware condition as version matches or desired is empty.")
+			meta.RemoveStatusCondition(&device.Status.Conditions, "UpgradingFirmware")
+			if err := r.Status().Update(ctx, &device); err != nil {
+				log.Error(err, "Failed to remove UpgradingFirmware condition")
+				// Don't requeue immediately on status update failure, let reconcile retry
+			}
+		}
 		return controllerruntime.Result{}, nil
 	}
 
-	log.Info("Firmware mismatch detected, upgrade required.", "desired", desiredVersion, "reported", reportedVersion)
+	log.Info("Firmware mismatch detected, upgrade required.", "desired", desiredFirmwareVersion, "reported", reportedFirmwareVersion)
 
 	firmwareUpgrade := &firmwarev1alpha1.FirmwareUpgrade{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-to-%s", device.Name, desiredVersion),
+			Name:      fmt.Sprintf("%s-to-%s", device.Name, desiredFirmwareVersion),
 			Namespace: device.Namespace,
 			Labels: map[string]string{
 				"iot.cloupeer.io/device-name": device.Name,
 			},
 		},
 		Spec: firmwarev1alpha1.FirmwareUpgradeSpec{
-			Version: desiredVersion,
+			Version: desiredFirmwareVersion,
 			// ARCHITECTURAL NOTE: The ImageUrl is a required field in the FirmwareUpgrade CRD.
 			// A robust system would have a central registry (perhaps another CRD or a database)
 			// where the FirmwareUpgrade controller can look up this URL based on the version.
 			// For this example, we will construct a placeholder URL.
-			ImageUrl: fmt.Sprintf("https://firmware.cloupeer.io/images/%s/firmware.bin", desiredVersion),
+			ImageUrl: fmt.Sprintf("https://firmware.cloupeer.io/images/%s/firmware.bin", desiredFirmwareVersion),
 			DeviceSelector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					// This selector ensures the upgrade targets ONLY this specific device.
@@ -125,12 +150,23 @@ func (r *DeviceReconciler) Reconcile(ctx context.Context, req controllerruntime.
 			return controllerruntime.Result{}, createErr
 		}
 
-		// **BORROWED IDEA**: Immediately update the Device status to provide instant feedback.
-		// We'll use the standard Kubernetes `Condition` pattern for this.
-		log.Info("Updating device status to 'Upgrading'")
-		// (Implementation for updating condition to 'Upgrading' can be added here)
-		// For example: meta.SetStatusCondition(&device.Status.Conditions, metav1.Condition{...})
-		// if err := r.Status().Update(ctx, &device); err != nil { ... }
+		log.Info("Setting device condition to 'UpgradingFirmware'")
+		upgradingCondition := metav1.Condition{
+			Type:               "UpgradingFirmware",
+			Status:             metav1.ConditionTrue,
+			ObservedGeneration: device.Generation,
+			LastTransitionTime: metav1.Now(),
+			Reason:             "UpgradeTriggered",
+			Message:            fmt.Sprintf("Firmware upgrade to version %s initiated by FirmwareUpgrade %s", desiredFirmwareVersion, firmwareUpgrade.Name),
+		}
+		meta.SetStatusCondition(&device.Status.Conditions, upgradingCondition)
+		// Optionally update Phase as well, derived from conditions
+		// device.Status.Phase = iotv1alpha1.DevicePhaseUnhealthy // Or a specific "Upgrading" phase if defined
+
+		if err := r.Status().Update(ctx, &device); err != nil {
+			log.Error(err, "Failed to update device status with UpgradingFirmware condition")
+			// Don't return error immediately, allow reconcile to retry creation check
+		}
 
 		return controllerruntime.Result{RequeueAfter: requeueAfter}, nil
 	} else if err != nil {

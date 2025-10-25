@@ -19,17 +19,15 @@ spec:
       jsonPath: .status.phase
       name: Status
       type: string
-    - description: The current firmware version of the device
-      jsonPath: .status.reportedFirmwareVersion
-      name: Firmware
-      type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age
       type: date
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: Device is the Schema for the devices API
+        description: |-
+          Device is the Schema for the devices API
+          Represents a single physical device instance managed by the Cloupeer platform.
         properties:
           apiVersion:
             description: |-
@@ -49,38 +47,98 @@ spec:
           metadata:
             type: object
           spec:
-            description: DeviceSpec defines the desired state of Device
+            description: Spec defines the desired state and configuration of the Device.
             properties:
-              config:
-                additionalProperties:
-                  type: string
+              deviceModelRef:
                 description: |-
-                  Key-value pairs for device-specific configuration.
-                  These will be pushed to the device.
+                  Required: DeviceModelRef is a reference to the DeviceModel used as a template
+                  for this device instance. The referenced DeviceModel must exist in the same namespace.
+                properties:
+                  name:
+                    default: ""
+                    description: |-
+                      Name of the referent.
+                      This field is effectively required, but due to backwards compatibility is
+                      allowed to be empty. Instances of this type with an empty value here are
+                      almost certainly wrong.
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                    type: string
                 type: object
-              description:
-                description: A human-readable description of the device.
-                type: string
-              deviceID:
+                x-kubernetes-map-type: atomic
+              properties:
                 description: |-
-                  DeviceID is the unique identifier of the physical device in the real world,
-                  such as a serial number or MAC address. This field is mandatory.
-                minLength: 1
-                type: string
-              firmwareVersion:
+                  List of properties specific to this device instance.
+                  Each property here must correspond to a ModelProperty defined in the referenced DeviceModel.
+                  It defines the desired state (for controllable properties) and reporting configuration for each property.
+                items:
+                  description: |-
+                    DeviceProperty defines instance-specific configuration for a property declared in the DeviceModel.
+                    It includes the desired state for controllable properties and reporting settings.
+                  properties:
+                    desired:
+                      description: |-
+                        Desired represents the desired value for a controllable property (ReadWrite access mode).
+                        The cloud platform sets this value, and the device agent attempts to apply it.
+                        For ReadOnly properties, this field is ignored.
+                      properties:
+                        metadata:
+                          additionalProperties:
+                            type: string
+                          description: |-
+                            Metadata contains additional information about the value, such as the timestamp when it was reported.
+                            Keys could include "timestamp", "source", etc.
+                          type: object
+                        value:
+                          description: |-
+                            Value is the actual value of the property, represented as a string.
+                            The interpretation of this string depends on the 'Type' defined in the corresponding ModelProperty.
+                          type: string
+                      type: object
+                    name:
+                      description: Name of the property. Must match a Name in the
+                        referenced DeviceModel's properties.
+                      type: string
+                    reportIntervalSeconds:
+                      description: |-
+                        ReportIntervalSeconds specifies the desired interval (in seconds) for reporting this property's value to the cloud.
+                        Overrides the default reporting interval if specified.
+                      format: int64
+                      type: integer
+                    reportToCloud:
+                      description: |-
+                        ReportToCloud indicates whether the value of this property should be reported to the cloud platform.
+                        Defaults to true if not specified. Allows filtering out unnecessary data.
+                        Use pointer for explicit false vs unset
+                      type: boolean
+                  type: object
+                type: array
+              protocol:
                 description: |-
-                  The desired firmware version for this device. The controller
-                  will attempt to trigger an upgrade if this differs from the
-                  version reported in the status.
-                type: string
-            required:
-            - deviceID
+                  Required: Protocol configuration specifies how to connect to this specific device instance.
+                  It includes the protocol name (which should generally match the one in DeviceModelRef)
+                  and instance-specific connection parameters (e.g., IP address, port, credentials).
+                properties:
+                  configData:
+                    description: |-
+                      ConfigData holds protocol-specific configuration parameters (e.g., IP address, port, device address, security settings).
+                      The structure is flexible (map[string]any) and interpreted by the corresponding protocol adapter (Agent logic).
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
+                  protocolName:
+                    description: |-
+                      ProtocolName specifies the name of the protocol to use (e.g., "modbus", "opcua").
+                      Should generally match the Protocol field in the referenced DeviceModel.
+                    type: string
+                type: object
             type: object
           status:
-            description: DeviceStatus defines the observed state of Device
+            description: Status reflects the observed state of the Device as reported
+              by the system.
             properties:
               conditions:
-                description: A list of conditions for the device.
+                description: |-
+                  Conditions provide detailed observations of the resource's current state.
+                  They follow the standard Kubernetes Conditions pattern.
                 items:
                   description: Condition contains details for one aspect of the current
                     state of this API Resource.
@@ -136,16 +194,67 @@ spec:
                   - type
                   type: object
                 type: array
-              lastSeenTime:
-                description: The last time the device was seen by the control plane.
+              lastOnlineTime:
+                description: LastOnlineTime is the timestamp when the device last
+                  successfully communicated with the hub.
                 format: date-time
                 type: string
               phase:
-                description: The last reported phase of the device.
+                description: |-
+                  Phase represents the high-level summary of the device's status.
+                  It should be derived from the more detailed Conditions.
                 type: string
-              reportedFirmwareVersion:
-                description: The current firmware version reported by the device.
-                type: string
+              twins:
+                description: |-
+                  Twins represents the digital twin state for device properties.
+                  Each twin tracks the reported value (actual state) of a property.
+                items:
+                  description: |-
+                    Twin represents the digital twin state for a single device property.
+                    It primarily holds the last reported value from the device.
+                  properties:
+                    observedDesired:
+                      description: |-
+                        ObservedDesired represents the last desired value that the device agent acknowledged receiving and is attempting to apply.
+                        Useful for tracking command acknowledgement in the control loop.
+                      properties:
+                        metadata:
+                          additionalProperties:
+                            type: string
+                          description: |-
+                            Metadata contains additional information about the value, such as the timestamp when it was reported.
+                            Keys could include "timestamp", "source", etc.
+                          type: object
+                        value:
+                          description: |-
+                            Value is the actual value of the property, represented as a string.
+                            The interpretation of this string depends on the 'Type' defined in the corresponding ModelProperty.
+                          type: string
+                      type: object
+                    propertyName:
+                      description: |-
+                        PropertyName is the name of the property this twin corresponds to.
+                        It must match the Name field of a ModelProperty in the DeviceModel and a DeviceProperty in the Device Spec.
+                      type: string
+                    reported:
+                      description: Reported represents the last known actual value
+                        of the property reported by the device agent.
+                      properties:
+                        metadata:
+                          additionalProperties:
+                            type: string
+                          description: |-
+                            Metadata contains additional information about the value, such as the timestamp when it was reported.
+                            Keys could include "timestamp", "source", etc.
+                          type: object
+                        value:
+                          description: |-
+                            Value is the actual value of the property, represented as a string.
+                            The interpretation of this string depends on the 'Type' defined in the corresponding ModelProperty.
+                          type: string
+                      type: object
+                  type: object
+                type: array
             type: object
         type: object
     served: true

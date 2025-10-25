@@ -4,81 +4,100 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// UpgradePhase defines the observed state of the firmware upgrade.
+// UpgradePhase defines the observed high-level state of the firmware upgrade task.
 type UpgradePhase string
 
-// Constants for upgrade phases.
+// Constants representing the possible phases of a firmware upgrade task.
 const (
-	UpgradePhasePending   UpgradePhase = "Pending"
+	// UpgradePhasePending indicates the task has been created but not yet processed by the controller.
+	UpgradePhasePending UpgradePhase = "Pending"
+	// UpgradePhaseUpgrading indicates the controller is actively managing the upgrade process for the targeted devices.
 	UpgradePhaseUpgrading UpgradePhase = "Upgrading"
+	// UpgradePhaseSucceeded indicates all targeted devices have successfully completed the firmware upgrade.
 	UpgradePhaseSucceeded UpgradePhase = "Succeeded"
-	UpgradePhaseFailed    UpgradePhase = "Failed"
+	// UpgradePhaseFailed indicates the upgrade task failed for one or more devices, or the task itself encountered an error.
+	UpgradePhaseFailed UpgradePhase = "Failed"
 )
 
-// FirmwareUpgradeSpec defines the desired state of FirmwareUpgrade
+// FirmwareUpgradeSpec defines the desired state of FirmwareUpgrade.
+// It specifies the parameters for initiating and targeting a firmware upgrade task.
 type FirmwareUpgradeSpec struct {
-	// The version of the firmware to upgrade to.
+	// Version specifies the target firmware version to upgrade the devices to.
+	// This version string should be meaningful to the device agent.
 	Version string `json:"version"`
 
-	// The URL where the firmware image can be downloaded.
+	// ImageUrl specifies the URL from which the device agent should download the firmware image.
+	// The accessibility of this URL from the device agent's perspective is crucial.
 	ImageUrl string `json:"imageUrl"`
 
-	// Selector to target which devices this upgrade should apply to.
-	// This uses standard Kubernetes label selection.
+	// DeviceSelector is a standard Kubernetes label selector used to identify the target Device CRs
+	// that this upgrade task should apply to. The FirmwareUpgrade controller will find devices
+	// matching this selector.
 	DeviceSelector *metav1.LabelSelector `json:"deviceSelector"`
 }
 
 // FirmwareUpgradeStatus defines the observed state of FirmwareUpgrade
+// It reflects the progress and outcome of the upgrade task across all targeted devices.
 type FirmwareUpgradeStatus struct {
-	// The current phase of the upgrade.
+	// Phase represents the current high-level phase of the overall upgrade task.
 	// +optional
 	Phase UpgradePhase `json:"phase,omitempty"`
 
-	// Total number of devices targeted by this upgrade.
+	// Total indicates the total number of devices identified by the DeviceSelector
+	// at the time the task started processing (or was last reconciled).
 	// +optional
 	Total int32 `json:"total,omitempty"`
 
-	// Number of devices that are currently upgrading.
+	// Upgrading indicates the number of targeted devices currently in the process of upgrading.
+	// This count is typically derived from the status of individual Device CRs.
 	// +optional
 	Upgrading int32 `json:"upgrading,omitempty"`
 
-	// Number of devices that have successfully upgraded.
+	// Succeeded indicates the number of targeted devices that have successfully upgraded
+	// to the target version specified in the Spec.
 	// +optional
 	Succeeded int32 `json:"succeeded,omitempty"`
 
-	// Number of devices that failed to upgrade.
+	// Failed indicates the number of targeted devices for which the upgrade attempt failed.
 	// +optional
 	Failed int32 `json:"failed,omitempty"`
 
-	// A list of conditions for the upgrade.
+	// Conditions provide detailed observations of the upgrade task's current state,
+	// following the standard Kubernetes Conditions pattern. They can offer more granular
+	// information about progress, errors, or specific stages.
 	// +optional
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
-//+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
-//+kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.phase",description="The current phase of the upgrade"
-//+kubebuilder:printcolumn:name="Total",type="integer",JSONPath=".status.total",description="Total number of devices targeted"
-//+kubebuilder:printcolumn:name="Succeeded",type="integer",JSONPath=".status.succeeded",description="Number of devices successfully upgraded"
-//+kubebuilder:printcolumn:name="Failed",type="integer",JSONPath=".status.failed",description="Number of devices that failed to upgrade"
-//+kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
-
-// FirmwareUpgrade is the Schema for the firmwareupgrades API
+// FirmwareUpgrade is the Schema for the firmwareupgrades API.
+// It represents a task to upgrade the firmware of one or more devices matching a selector.
+// The controller managing this resource is responsible for orchestrating the upgrade process.
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.phase",description="The current phase of the upgrade"
+// +kubebuilder:printcolumn:name="Total",type="integer",JSONPath=".status.total",description="Total number of devices targeted"
+// +kubebuilder:printcolumn:name="Succeeded",type="integer",JSONPath=".status.succeeded",description="Number of devices successfully upgraded"
+// +kubebuilder:printcolumn:name="Failed",type="integer",JSONPath=".status.failed",description="Number of devices that failed to upgrade"
+// +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 type FirmwareUpgrade struct {
-	metav1.TypeMeta   `json:",inline"`
+	metav1.TypeMeta `json:",inline"`
+	// Standard Kubernetes object metadata.
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   FirmwareUpgradeSpec   `json:"spec,omitempty"`
+	// Spec defines the desired parameters of the firmware upgrade task.
+	Spec FirmwareUpgradeSpec `json:"spec"`
+	// Status reflects the observed progress and outcome of the firmware upgrade task.
 	Status FirmwareUpgradeStatus `json:"status,omitempty"`
 }
 
-//+kubebuilder:object:root=true
-
-// FirmwareUpgradeList contains a list of FirmwareUpgrade
+// FirmwareUpgradeList contains a list of FirmwareUpgrade.
+// +kubebuilder:object:root=true
 type FirmwareUpgradeList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []FirmwareUpgrade `json:"items"`
+
+	// Items is the list of FirmwareUpgrade resources.
+	Items []FirmwareUpgrade `json:"items"`
 }
 
 func init() {

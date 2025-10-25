@@ -37,7 +37,10 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: FirmwareUpgrade is the Schema for the firmwareupgrades API
+        description: |-
+          FirmwareUpgrade is the Schema for the firmwareupgrades API.
+          It represents a task to upgrade the firmware of one or more devices matching a selector.
+          The controller managing this resource is responsible for orchestrating the upgrade process.
         properties:
           apiVersion:
             description: |-
@@ -57,12 +60,14 @@ spec:
           metadata:
             type: object
           spec:
-            description: FirmwareUpgradeSpec defines the desired state of FirmwareUpgrade
+            description: Spec defines the desired parameters of the firmware upgrade
+              task.
             properties:
               deviceSelector:
                 description: |-
-                  Selector to target which devices this upgrade should apply to.
-                  This uses standard Kubernetes label selection.
+                  DeviceSelector is a standard Kubernetes label selector used to identify the target Device CRs
+                  that this upgrade task should apply to. The FirmwareUpgrade controller will find devices
+                  matching this selector.
                 properties:
                   matchExpressions:
                     description: matchExpressions is a list of label selector requirements.
@@ -108,10 +113,14 @@ spec:
                 type: object
                 x-kubernetes-map-type: atomic
               imageUrl:
-                description: The URL where the firmware image can be downloaded.
+                description: |-
+                  ImageUrl specifies the URL from which the device agent should download the firmware image.
+                  The accessibility of this URL from the device agent's perspective is crucial.
                 type: string
               version:
-                description: The version of the firmware to upgrade to.
+                description: |-
+                  Version specifies the target firmware version to upgrade the devices to.
+                  This version string should be meaningful to the device agent.
                 type: string
             required:
             - deviceSelector
@@ -119,10 +128,14 @@ spec:
             - version
             type: object
           status:
-            description: FirmwareUpgradeStatus defines the observed state of FirmwareUpgrade
+            description: Status reflects the observed progress and outcome of the
+              firmware upgrade task.
             properties:
               conditions:
-                description: A list of conditions for the upgrade.
+                description: |-
+                  Conditions provide detailed observations of the upgrade task's current state,
+                  following the standard Kubernetes Conditions pattern. They can offer more granular
+                  information about progress, errors, or specific stages.
                 items:
                   description: Condition contains details for one aspect of the current
                     state of this API Resource.
@@ -179,25 +192,35 @@ spec:
                   type: object
                 type: array
               failed:
-                description: Number of devices that failed to upgrade.
+                description: Failed indicates the number of targeted devices for which
+                  the upgrade attempt failed.
                 format: int32
                 type: integer
               phase:
-                description: The current phase of the upgrade.
+                description: Phase represents the current high-level phase of the
+                  overall upgrade task.
                 type: string
               succeeded:
-                description: Number of devices that have successfully upgraded.
+                description: |-
+                  Succeeded indicates the number of targeted devices that have successfully upgraded
+                  to the target version specified in the Spec.
                 format: int32
                 type: integer
               total:
-                description: Total number of devices targeted by this upgrade.
+                description: |-
+                  Total indicates the total number of devices identified by the DeviceSelector
+                  at the time the task started processing (or was last reconciled).
                 format: int32
                 type: integer
               upgrading:
-                description: Number of devices that are currently upgrading.
+                description: |-
+                  Upgrading indicates the number of targeted devices currently in the process of upgrading.
+                  This count is typically derived from the status of individual Device CRs.
                 format: int32
                 type: integer
             type: object
+        required:
+        - spec
         type: object
     served: true
     storage: true

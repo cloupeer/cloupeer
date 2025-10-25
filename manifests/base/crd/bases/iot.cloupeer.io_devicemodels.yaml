@@ -1,0 +1,102 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.16.1
+  name: devicemodels.iot.cloupeer.io
+spec:
+  group: iot.cloupeer.io
+  names:
+    kind: DeviceModel
+    listKind: DeviceModelList
+    plural: devicemodels
+    singular: devicemodel
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: |-
+          DeviceModel is the Schema for the devicemodels API.
+          It represents a template or blueprint for a class of devices sharing common properties and protocol.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: Spec defines the desired state of the DeviceModel.
+            properties:
+              properties:
+                description: Properties defines the common properties possessed by
+                  this type of device.
+                items:
+                  description: |-
+                    ModelProperty describes an individual device property defined within a DeviceModel.
+                    It specifies the metadata and capabilities of a property, like its name, type, and access mode.
+                  properties:
+                    accessMode:
+                      description: AccessMode defines if the property is ReadOnly
+                        or ReadWrite (control).
+                      enum:
+                      - ReadWrite
+                      - ReadOnly
+                      type: string
+                    description:
+                      description: Description is a human-readable description of
+                        the property.
+                      type: string
+                    maximum:
+                      description: Maximum value constraint for the property (interpreted
+                        based on Type).
+                      type: string
+                    minimum:
+                      description: Minimum value constraint for the property (interpreted
+                        based on Type).
+                      type: string
+                    name:
+                      description: |-
+                        Name of the property. It should be unique within the DeviceModel.
+                        This name is used to associate DeviceProperty instances in Device CRs.
+                      type: string
+                    type:
+                      description: Type specifies the data type of the property.
+                      enum:
+                      - INT
+                      - FLOAT
+                      - DOUBLE
+                      - STRING
+                      - BOOLEAN
+                      - BYTES
+                      - STREAM
+                      type: string
+                    unit:
+                      description: Unit of the property value (e.g., "°C", "%", "ppm").
+                      type: string
+                  type: object
+                type: array
+              protocol:
+                description: |-
+                  Protocol indicates the general protocol name used by devices of this model.
+                  Specific connection details are in the Device CR.
+                type: string
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
