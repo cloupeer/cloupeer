@@ -906,7 +906,7 @@ issues:
     #   - stylecheck
     #   - importas
     #   - unparam
-    #   path: (controller/firmware/.*|controller/iot/.*|controller/namespace/.*)\.go
+    #   path: (controller/.*|controller/namespace/.*)\.go
     - linters:
       - errcheck
       path: (printers/internalversion/.*)\.go

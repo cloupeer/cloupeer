@@ -12,10 +12,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
-	"cloupeer.io/cloupeer/internal/controller/device"
-	"cloupeer.io/cloupeer/internal/controller/firmwareupgrade"
-	firmwarev1alpha1 "cloupeer.io/cloupeer/pkg/apis/firmware/v1alpha1"
-	iotv1alpha1 "cloupeer.io/cloupeer/pkg/apis/iot/v1alpha1"
 	"cloupeer.io/cloupeer/pkg/log"
 )
 
@@ -23,8 +19,6 @@ var cloupeerScheme = runtime.NewScheme()
 
 func init() {
 	utilruntime.Must(scheme.AddToScheme(cloupeerScheme))
-	utilruntime.Must(firmwarev1alpha1.AddToScheme(cloupeerScheme))
-	utilruntime.Must(iotv1alpha1.AddToScheme(cloupeerScheme))
 }
 
 type Controller interface {
@@ -60,13 +54,10 @@ func NewControllerManager(ctx context.Context, kubeconfig *rest.Config, healthPr
 }
 
 func setupControllers(ctx context.Context, mgr manager.Manager) error {
-	cli := mgr.GetClient()
-	sche := mgr.GetScheme()
+	// cli := mgr.GetClient()
+	// sche := mgr.GetScheme()
 
-	controllers := []Controller{
-		device.NewDeviceReconciler(cli, sche),
-		firmwareupgrade.NewFirmwareUpgradeReconciler(cli, sche),
-	}
+	controllers := []Controller{}
 
 	for _, ctl := range controllers {
 		if err := ctl.SetupWithManager(ctx, mgr); err != nil {

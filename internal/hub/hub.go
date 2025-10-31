@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strings"
 	"time"
 
 	"k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/scheme"
@@ -13,8 +12,6 @@ import (
 	controllerclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 
-	firmwarev1alpha1 "cloupeer.io/cloupeer/pkg/apis/firmware/v1alpha1"
-	iotv1alpha1 "cloupeer.io/cloupeer/pkg/apis/iot/v1alpha1"
 	"cloupeer.io/cloupeer/pkg/log"
 )
 
@@ -32,9 +29,6 @@ func (s *HubServer) Run(ctx context.Context) error {
 
 	// Setup HTTP router
 	mux := http.NewServeMux()
-	mux.HandleFunc("/heartbeat", s.handleHeartbeat)
-	// A single handler for all /tasks/ paths
-	mux.HandleFunc("/tasks/", s.handleTaskRoutes)
 
 	// Setup HTTP server with graceful shutdown
 	server := &http.Server{
@@ -75,8 +69,6 @@ func (s *HubServer) initK8sClient() error {
 	// Create a new scheme and add all our API types and standard types
 	cloupeerscheme := runtime.NewScheme()
 	_ = scheme.AddToScheme(cloupeerscheme) // Add standard schemes like v1.Pod, etc.
-	_ = iotv1alpha1.AddToScheme(cloupeerscheme)
-	_ = firmwarev1alpha1.AddToScheme(cloupeerscheme)
 
 	k8sclient, err := controllerclient.New(k8sconfig, controllerclient.Options{Scheme: cloupeerscheme})
 	if err != nil {
@@ -85,26 +77,4 @@ func (s *HubServer) initK8sClient() error {
 	}
 	s.k8sclient = k8sclient
 	return nil
-}
-
-// handleTaskRoutes is a simple router for /tasks/{deviceID} and /tasks/{taskName}/status
-func (s *HubServer) handleTaskRoutes(w http.ResponseWriter, r *http.Request) {
-	path := strings.TrimPrefix(r.URL.Path, "/tasks/")
-	parts := strings.Split(path, "/")
-
-	// Route for /tasks/{taskName}/status
-	if len(parts) == 2 && parts[1] == "status" {
-		taskName := parts[0]
-		s.handleUpdateTaskStatus(w, r, taskName)
-		return
-	}
-
-	// Route for /tasks/{deviceID}
-	if len(parts) == 1 && parts[0] != "" {
-		deviceID := parts[0]
-		s.handleGetTask(w, r, deviceID)
-		return
-	}
-
-	http.NotFound(w, r)
 }

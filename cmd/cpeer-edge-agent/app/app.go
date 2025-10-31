@@ -11,7 +11,7 @@ import (
 
 const (
 	commandName = "cpeer-edge-agent"
-	commandDesc = `The Cloupeer Edge Agent runs on edge devices, reporting its status to the
+	commandDesc = `The Cloupeer Edge Agent runs on edge, reporting its status to the
 cpeer-hub and executing tasks such as firmware upgrades.`
 )
 
