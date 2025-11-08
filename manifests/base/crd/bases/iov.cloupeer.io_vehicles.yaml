@@ -43,18 +43,26 @@ spec:
                 description: A human-readable description of the vehicle.
                 type: string
               firmwareVersion:
-                description: The desired firmware version for this vehicle.
+                description: |-
+                  The desired firmware version for this vehicle.
+                  The controller will attempt to update the vehicle to this version.
                 type: string
             type: object
           status:
             description: VehicleStatus defines the observed state of Vehicle
             properties:
+              errorMessage:
+                description: Any error message during the OTA process.
+                type: string
               lastSeenTime:
                 description: The last time the vehicle was seen by the control plane.
                 format: date-time
                 type: string
               phase:
-                description: The last reported phase of the vehicle.
+                description: The last reported phase of the vehicle's OTA status.
+                type: string
+              reportedFirmwareVersion:
+                description: The firmware version last reported by the vehicle.
                 type: string
             type: object
         type: object
