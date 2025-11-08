@@ -27,6 +27,7 @@
 创建文件：`pkg/apis/iov/v1alpha1/groupversion_info.go`
 
 ```go
+// +k8s:deepcopy-gen=package
 // +groupName=iov.cloupeer.io
 package v1alpha1
 
@@ -126,24 +127,31 @@ make manifests generate
 1.  **生成 DeepCopy 方法：** 在你的 `v1alpha1` 目录下创建一个 `zz_generated.deepcopy.go` 文件。你的 API 类型必须实现 `runtime.Object` 接口，这些方法是必需的。
 2.  **生成 CRD 清单：** 在 `manifests/base/crd/bases/` 目录下生成 `xxx.cloupeer.io_xxxxxxx.yaml` 文件。
 3.  **更新 Kustomization：** 自动将新生成的 CRD 文件名添加到 `manifests/base/crd/bases/kustomization.yaml` 中。
-4.  **更新 RBAC 权限：** 更新 `manifests/components/cpeer-controller-manager/base/generated.manager-role.yaml` 文件，为 controller-manager 添加操作新 `Vehicle` 资源的 ClusterRole 权限。
+
 
 ### 第 3 步：实现 Controller 逻辑
 
 代码生成后，你需要为新的 CRD 编写业务逻辑，即 `Controller`。
 
-1.  在 `internal/controller/` 目录下为你的 CRD 创建一个新目录，例如 `internal/controller/vehicle/`。
-2.  在该目录下创建一个 `controller.go` 文件，并编写你的 `Reconcile` 循环。
-3.  打开 `internal/controller/manager.go`，在 `setupControllers` 函数中初始化并注册你的新 Controller。
+1. 在 `internal/controller/` 目录下为你的 CRD 创建一个新目录，例如 `internal/controller/vehicle/`。
+2. 在该目录下创建一个 `vehiclecontroller.go` 文件，并编写你的 `Reconcile` 循环。
+3. 在 Reconcile 方法上添加 `//+kubebuilder:rbac:groups=iov.cloupeer.io,resources=vehicles,...` 标记。
+4. 打开 `internal/controller/manager.go`，在 `setupControllers` 函数中初始化并注册你的新 Controller。
+
+然后，再次执行：
+
+```bash
+make manifests generate
+```
+
+这次会**更新 RBAC 权限：** 更新 `manifests/components/cpeer-controller-manager/base/generated.manager-role.yaml` 文件，为 controller-manager 添加操作新 `Vehicle` 资源的 ClusterRole 权限。
+
 
 ### 第 4 步：验证
 
-完成以上步骤后，你可以通过运行测试和部署到本地集群来验证你的工作。
+完成以上步骤后，你可以部署到本地集群来验证你的工作。
 
 ```bash
-# Run unit and integration tests
-make test
-
 # Install the new CRD into your cluster
 make install
 

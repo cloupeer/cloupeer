@@ -1,0 +1,8 @@
+apiVersion: iov.cloupeer.io/v1alpha1
+kind: Vehicle
+metadata:
+  name: vh-001
+  namespace: cloupeer-system # 因为 scope 是 Namespaced，所以最好明确指定
+spec:
+  description: "The first vehicle"
+  firmwareVersion: v1.0

@@ -1,0 +1,64 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.16.1
+  name: vehicles.iov.cloupeer.io
+spec:
+  group: iov.cloupeer.io
+  names:
+    kind: Vehicle
+    listKind: VehicleList
+    plural: vehicles
+    singular: vehicle
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: Vehicle is the Schema for the vehicles API
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: VehicleSpec defines the desired state of Vehicle
+            properties:
+              description:
+                description: A human-readable description of the vehicle.
+                type: string
+              firmwareVersion:
+                description: The desired firmware version for this vehicle.
+                type: string
+            type: object
+          status:
+            description: VehicleStatus defines the observed state of Vehicle
+            properties:
+              lastSeenTime:
+                description: The last time the vehicle was seen by the control plane.
+                format: date-time
+                type: string
+              phase:
+                description: The last reported phase of the vehicle.
+                type: string
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

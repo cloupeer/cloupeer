@@ -1,0 +1,32 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: manager-role
+rules:
+- apiGroups:
+  - iov.cloupeer.io
+  resources:
+  - vehicles
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - iov.cloupeer.io
+  resources:
+  - vehicles/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - iov.cloupeer.io
+  resources:
+  - vehicles/status
+  verbs:
+  - get
+  - patch
+  - update
