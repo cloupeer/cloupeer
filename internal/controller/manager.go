@@ -56,12 +56,19 @@ func NewControllerManager(ctx context.Context, kubeconfig *rest.Config, healthPr
 	return mgr, nil
 }
 
+// setupControllers initializes and registers all controllers with the manager.
 func setupControllers(ctx context.Context, mgr manager.Manager) error {
 	cli := mgr.GetClient()
 	sche := mgr.GetScheme()
 
+	// Get an EventRecorder for the vehicle controller.
+	// The name "cloupeer-vehicle-controller" will appear in the
+	// `reportingComponent` field of the created Event objects.
+	recorder := mgr.GetEventRecorderFor("cloupeer-vehicle-controller")
+
+	// Register Controllers
 	controllers := []Controller{
-		vehicle.NewReconciler(cli, sche),
+		vehicle.NewReconciler(cli, sche, recorder),
 	}
 
 	for _, ctl := range controllers {
