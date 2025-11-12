@@ -2,164 +2,108 @@ package vehicle
 
 import (
 	"context"
-	"errors"
-	"strings"
+	"fmt"
 
-	"github.com/go-logr/logr"
-	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/log"
+	"github.com/looplab/fsm"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	fsmutil "cloupeer.io/cloupeer/internal/pkg/util/fsm"
 	iovv1alpha1 "cloupeer.io/cloupeer/pkg/apis/iov/v1alpha1"
 )
 
-// phaseHandler defines the signature for a function that handles a specific state machine phase.
-// By passing the logger, we avoid the `log.FromContext(ctx)` boilerplate in each handler.
-// This signature choice promotes stateless, easily testable handler functions.
-type phaseHandler func(ctx context.Context, logger logr.Logger, v *iovv1alpha1.Vehicle) (ctrl.Result, error)
+const (
+	// EventUpdate (Active) checks if an update is required.
+	EventUpdate = "event_update"
+	// EventSuccess
+	EventSuccess = "event_success"
+	// EventFail
+	EventFail = "event_fail"
+	// EventFinalize (Active) cleans up a Succeeded state back to Idle.
+	EventFinalize = "event_finalize"
+)
 
-// stateMachine implements the SubReconciler interface for the Vehicle OTA state machine.
-type stateMachine struct {
-	// handlers is a map of all state-handling functions.
-	//
-	// This map is read-only after initialization in NewStateMachine(),
-	// making it completely safe for concurrent Reconcile calls.
-	handlers map[iovv1alpha1.VehiclePhase]phaseHandler
+type FiniteStateMachine struct {
+	*fsm.FSM
 }
 
-// NewStateMachine creates a new state machine sub-reconciler.
-// It initializes the handler map, connecting phases to their logic functions.
-func NewStateMachine() SubReconciler {
-	return &stateMachine{
-		handlers: map[iovv1alpha1.VehiclePhase]phaseHandler{
-			"":                                  initHandler, // Map empty phase to Idle handler for initialization
-			iovv1alpha1.VehiclePhaseIdle:        idleHandler,
-			iovv1alpha1.VehiclePhasePending:     pendingHandler,
-			iovv1alpha1.VehiclePhaseDownloading: downloadHandler,
-			iovv1alpha1.VehiclePhaseInstalling:  installHandler,
-			iovv1alpha1.VehiclePhaseRebooting:   rebootHandler,
-			iovv1alpha1.VehiclePhaseSucceeded:   successHandler,
-			iovv1alpha1.VehiclePhaseFailed:      failedHandler,
-		},
-	}
-}
+func NewFiniteStateMachine(initialstate string) *FiniteStateMachine {
+	f := &FiniteStateMachine{}
 
-// Reconcile implements the SubReconciler interface.
-// It acts as the dispatcher for the state machine, finding and executing
-// the correct handler for the Vehicle's current phase.
-func (s *stateMachine) Reconcile(ctx context.Context, v *iovv1alpha1.Vehicle) (ctrl.Result, error) {
-	// Get the logger once from the context, which includes
-	// reconciliation-specific details like NamespacedName.
-	logger := log.FromContext(ctx)
-
-	// Dispatch to the correct handler based on the current phase.
-	handler, exists := s.handlers[v.Status.Phase]
-	if !exists {
-		// This should not happen if all phases are defined in the map.
-		logger.Error(nil, "Unknown state machine phase", "phase", v.Status.Phase)
-		// No requeue, as this is a programming error, not a transient state.
-		return ctrl.Result{}, nil
+	events := fsm.Events{
+		{Name: EventUpdate, Src: []string{string(iovv1alpha1.VehiclePhaseIdle)}, Dst: string(iovv1alpha1.VehiclePhasePending)},
+		{Name: EventSuccess, Src: []string{string(iovv1alpha1.VehiclePhasePending)}, Dst: string(iovv1alpha1.VehiclePhaseSucceeded)},
+		{Name: EventFail, Src: []string{string(iovv1alpha1.VehiclePhasePending)}, Dst: string(iovv1alpha1.VehiclePhaseFailed)},
+		{Name: EventFinalize, Src: []string{string(iovv1alpha1.VehiclePhaseSucceeded)}, Dst: string(iovv1alpha1.VehiclePhaseIdle)},
 	}
 
-	// Execute the state-specific logic.
-	return handler(ctx, logger, v)
-}
+	callbacks := fsm.Callbacks{
+		// Guards (before_...): Decide if a transition is allowed
+		"before_" + EventUpdate: fsmutil.WrapEvent(f.GuardUpdateRequired),
 
-// initHandler handles the initialization of a new Vehicle resource.
-func initHandler(ctx context.Context, logger logr.Logger, v *iovv1alpha1.Vehicle) (ctrl.Result, error) {
-	logger.Info("Initializing Vehicle status: Phase not set, defaulting to Idle.", "vehicle", v.Name)
-	v.Status.Phase = iovv1alpha1.VehiclePhaseIdle
-
-	// Simulation: Set a default reported version if one isn't present.
-	if v.Status.ReportedFirmwareVersion == "" {
-		v.Status.ReportedFirmwareVersion = "v1.0.0"
+		// Side-Effects (enter_...): Set fields upon entering a state
+		"enter_" + string(iovv1alpha1.VehiclePhasePending):   fsmutil.WrapEvent(f.ActionEnterPending),
+		"enter_" + string(iovv1alpha1.VehiclePhaseSucceeded): fsmutil.WrapEvent(f.ActionEnterSucceeded),
+		"enter_" + string(iovv1alpha1.VehiclePhaseFailed):    fsmutil.WrapEvent(f.ActionEnterFailed),
+		"enter_" + string(iovv1alpha1.VehiclePhaseIdle):      fsmutil.WrapEvent(f.ActionEnterIdle),
 	}
 
-	// Return an empty result. The main loop will detect the status
-	// change, patch it, and the patch will trigger the next reconcile.
-	return ctrl.Result{}, nil
+	f.FSM = fsm.NewFSM(initialstate, events, callbacks)
+	return f
 }
 
-// idleHandler handles the logic when the Vehicle is in the Idle phase.
-func idleHandler(ctx context.Context, logger logr.Logger, v *iovv1alpha1.Vehicle) (ctrl.Result, error) {
-	updateRequired := v.Spec.FirmwareVersion != "" && v.Spec.FirmwareVersion != v.Status.ReportedFirmwareVersion
-	if updateRequired {
-		logger.Info("Update required, moving from Idle to Pending.",
-			"specVersion", v.Spec.FirmwareVersion,
-			"reportedVersion", v.Status.ReportedFirmwareVersion)
-
-		v.Status.Phase = iovv1alpha1.VehiclePhasePending
-		v.Status.ErrorMessage = "" // Clear any previous error
-
-		// State changed. Return empty result. Patch will trigger requeue.
-		return ctrl.Result{}, nil
+// GuardUpdateRequired is a "Guard" callback.
+// It checks if an update is needed and cancels the transition if not.
+func (f *FiniteStateMachine) GuardUpdateRequired(ctx context.Context, e *fsm.Event) error {
+	v := e.Args[0].(*iovv1alpha1.Vehicle)
+	if !(isNewVersion(v)) {
+		// No update needed. Cancel the transition.
+		e.Cancel(fsm.NoTransitionError{})
 	}
-
-	// No update needed. Stop reconciliation for this cycle.
-	return ctrl.Result{}, nil
+	return nil
 }
 
-// pendingHandler handles the logic for the Pending phase.
-func pendingHandler(ctx context.Context, logger logr.Logger, v *iovv1alpha1.Vehicle) (ctrl.Result, error) {
-	logger.Info("Starting OTA process. Moving from Pending to Downloading.")
-	v.Status.Phase = iovv1alpha1.VehiclePhaseDownloading
-	return ctrl.Result{}, nil
-}
+// ActionEnterPending is a "Side-Effect" callback.
+// It resets the status for a new update attempt (either new or retry).
+func (f *FiniteStateMachine) ActionEnterPending(ctx context.Context, e *fsm.Event) error {
+	v := e.Args[0].(*iovv1alpha1.Vehicle)
 
-// downloadHandler simulates the Downloading phase.
-func downloadHandler(ctx context.Context, logger logr.Logger, v *iovv1alpha1.Vehicle) (ctrl.Result, error) {
-	// Simulation: Deterministic failure for testing.
-	// We simulate a network error for any vehicle whose name ends in "7".
-	// This provides a predictable way to test the Failed state.
-	if strings.HasSuffix(v.Name, "7") {
-		simulatedErr := errors.New("simulated network failure: vehicle name ends in '7' ")
-		logger.Error(simulatedErr, "Simulating deterministic network failure.", "vehicleName", v.Name)
-
-		v.Status.Phase = iovv1alpha1.VehiclePhaseFailed
-		v.Status.ErrorMessage = simulatedErr.Error()
-		return ctrl.Result{}, nil
-	}
-
-	// Simulation: Instantaneous download success.
-	logger.Info("Download complete. Moving from Downloading to Installing.")
-	v.Status.Phase = iovv1alpha1.VehiclePhaseInstalling
-	return ctrl.Result{}, nil
-}
-
-// installHandler simulates the Installing phase.
-func installHandler(ctx context.Context, logger logr.Logger, v *iovv1alpha1.Vehicle) (ctrl.Result, error) {
-	logger.Info("Installation complete. Moving from Installing to Rebooting.")
-	v.Status.Phase = iovv1alpha1.VehiclePhaseRebooting
-	return ctrl.Result{}, nil
-}
-
-// rebootHandler simulates the Rebooting phase.
-func rebootHandler(ctx context.Context, logger logr.Logger, v *iovv1alpha1.Vehicle) (ctrl.Result, error) {
-	logger.Info("Reboot complete. Moving from Rebooting to Succeeded. Updating reported version.")
-
-	v.Status.Phase = iovv1alpha1.VehiclePhaseSucceeded
-	v.Status.ReportedFirmwareVersion = v.Spec.FirmwareVersion // Critical: Status now matches Spec
+	// Reset status fields (Conditions, ErrorMessage) to prepare for a new update cycle.
+	v.Status.Conditions = []metav1.Condition{}
 	v.Status.ErrorMessage = ""
-	return ctrl.Result{}, nil
+	SetCondition(v, iovv1alpha1.ConditionTypeReady, metav1.ConditionFalse, "Pending", "Update process started")
+	return nil
 }
 
-// successHandler handles the final transition from Succeeded back to Idle.
-func successHandler(ctx context.Context, logger logr.Logger, v *iovv1alpha1.Vehicle) (ctrl.Result, error) {
-	logger.Info("Update Succeeded. Moving back to Idle.")
-	v.Status.Phase = iovv1alpha1.VehiclePhaseIdle
-	return ctrl.Result{}, nil
+// ActionEnterSucceeded is a "Side-Effect" callback.
+func (f *FiniteStateMachine) ActionEnterSucceeded(ctx context.Context, e *fsm.Event) error {
+	v := e.Args[0].(*iovv1alpha1.Vehicle)
+
+	v.Status.ErrorMessage = ""
+	SetCondition(v, iovv1alpha1.ConditionTypeReady, metav1.ConditionTrue, "Succeeded", "Firmware update applied")
+	return nil
 }
 
-// failedHandler handles the logic when the Vehicle is in a terminal Failed state.
-func failedHandler(ctx context.Context, logger logr.Logger, v *iovv1alpha1.Vehicle) (ctrl.Result, error) {
-	// The vehicle is in a Failed state. We take no action.
-	// The controller will wait for an external change (e.g., user
-	// updating the spec.firmwareVersion) to trigger a new cycle.
-	//
-	// We log at the Error level, passing 'nil' as the error object
-	// because this reconcile loop itself isn't failing; it's just
-	// observing a resource that is already in a failed state.
-	logger.Error(nil, "Vehicle is in terminal Failed state. No action will be taken.",
-		"vehicleName", v.Name,
-		"error", v.Status.ErrorMessage)
-	return ctrl.Result{}, nil
+// ActionEnterFailed is a "Side-Effect" callback.
+func (f *FiniteStateMachine) ActionEnterFailed(ctx context.Context, e *fsm.Event) error {
+	v := e.Args[0].(*iovv1alpha1.Vehicle)
+	errMsg := "unknown error"
+	if len(e.Args) > 1 && e.Args[1] != nil {
+		if err, ok := e.Args[1].(error); ok {
+			errMsg = err.Error()
+		} else if s, ok := e.Args[1].(string); ok {
+			errMsg = s
+		}
+	}
+	// We embed the spec version in the error message for the Reconcile loop's retry logic.
+	v.Status.ErrorMessage = fmt.Sprintf("failed on version %s: %s", v.Spec.FirmwareVersion, errMsg)
+	SetCondition(v, iovv1alpha1.ConditionTypeReady, metav1.ConditionFalse, "Failed", errMsg)
+	return nil
+}
+
+// ActionEnterIdle is a "Side-Effect" callback.
+func (f *FiniteStateMachine) ActionEnterIdle(ctx context.Context, e *fsm.Event) error {
+	v := e.Args[0].(*iovv1alpha1.Vehicle)
+	v.Status.ErrorMessage = ""
+	SetCondition(v, iovv1alpha1.ConditionTypeReady, metav1.ConditionTrue, "Idle", "Vehicle is idle")
+	return nil
 }

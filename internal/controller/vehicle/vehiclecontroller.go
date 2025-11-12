@@ -39,7 +39,7 @@ func NewReconciler(cli client.Client, sche *runtime.Scheme, recorder record.Even
 	// We can add more sub-reconcilers here (e.g., NewConfigReconciler())
 	// and they will be executed in order.
 	r.subReconcilers = []SubReconciler{
-		NewStateMachine(),
+		NewSubStateMachine(),
 	}
 
 	return r

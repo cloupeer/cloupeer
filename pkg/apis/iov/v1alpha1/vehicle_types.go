@@ -12,17 +12,8 @@ const (
 	// VehiclePhaseIdle means the vehicle is stable and no update is in progress.
 	VehiclePhaseIdle VehiclePhase = "Idle"
 
-	// VehiclePhasePending means an update is required, but not yet started.
+	// VehiclePhasePending means an update is required.
 	VehiclePhasePending VehiclePhase = "Pending"
-
-	// VehiclePhaseDownloading means the vehicle is actively downloading the firmware.
-	VehiclePhaseDownloading VehiclePhase = "Downloading"
-
-	// VehiclePhaseInstalling means the firmware is being installed.
-	VehiclePhaseInstalling VehiclePhase = "Installing"
-
-	// VehiclePhaseRebooting means the vehicle is rebooting to apply the update.
-	VehiclePhaseRebooting VehiclePhase = "Rebooting"
 
 	// VehiclePhaseSucceeded means the update finished successfully.
 	VehiclePhaseSucceeded VehiclePhase = "Succeeded"
@@ -60,7 +51,27 @@ type VehicleStatus struct {
 	// The last time the vehicle was seen by the control plane.
 	// +optional
 	LastSeenTime *metav1.Time `json:"lastSeenTime,omitempty"`
+
+	// Conditions represent the latest available observations of the Vehicle's state.
+	// +optional
+	// +patchMergeKey=type
+	// +patchStrategy=merge
+	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
 }
+
+// --- 定义 Condition Types ---
+const (
+	// ConditionTypeReady 表示车辆是否准备好接收新指令（即处于 Idle）
+	ConditionTypeReady = "Ready"
+	// ConditionTypeDownloaded 表示固件是否已下载
+	ConditionTypeDownloaded = "Downloaded"
+	// ConditionTypeInstalled 表示固件是否已安装
+	ConditionTypeInstalled = "Installed"
+	// ConditionTypeRebooted 表示车辆是否已重启
+	ConditionTypeRebooted = "Rebooted"
+	// ConditionTypeFailed 表示OTA升级失败
+	ConditionTypeFailed = "Failed"
+)
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
