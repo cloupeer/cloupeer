@@ -122,6 +122,11 @@ spec:
               reportedFirmwareVersion:
                 description: The firmware version last reported by the vehicle.
                 type: string
+              retryCount:
+                description: RetryCount tracks the number of automated retries for
+                  the current update.
+                format: int32
+                type: integer
             type: object
         type: object
     served: true

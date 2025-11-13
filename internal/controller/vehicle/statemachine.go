@@ -18,6 +18,8 @@ const (
 	EventSuccess = "event_success"
 	// EventFail
 	EventFail = "event_fail"
+	// EventRetry
+	EventRetry = "event_retry"
 	// EventFinalize (Active) cleans up a Succeeded state back to Idle.
 	EventFinalize = "event_finalize"
 )
@@ -34,6 +36,9 @@ func NewFiniteStateMachine(initialstate string) *FiniteStateMachine {
 		{Name: EventSuccess, Src: []string{string(iovv1alpha1.VehiclePhasePending)}, Dst: string(iovv1alpha1.VehiclePhaseSucceeded)},
 		{Name: EventFail, Src: []string{string(iovv1alpha1.VehiclePhasePending)}, Dst: string(iovv1alpha1.VehiclePhaseFailed)},
 		{Name: EventFinalize, Src: []string{string(iovv1alpha1.VehiclePhaseSucceeded)}, Dst: string(iovv1alpha1.VehiclePhaseIdle)},
+
+		// Failed retry
+		{Name: EventRetry, Src: []string{string(iovv1alpha1.VehiclePhaseFailed)}, Dst: string(iovv1alpha1.VehiclePhasePending)},
 	}
 
 	callbacks := fsm.Callbacks{
@@ -66,6 +71,15 @@ func (f *FiniteStateMachine) GuardUpdateRequired(ctx context.Context, e *fsm.Eve
 // It resets the status for a new update attempt (either new or retry).
 func (f *FiniteStateMachine) ActionEnterPending(ctx context.Context, e *fsm.Event) error {
 	v := e.Args[0].(*iovv1alpha1.Vehicle)
+
+	switch e.Event {
+	case EventUpdate:
+		// This is a NEW update (from Idle)
+		v.Status.RetryCount = 0
+	case EventRetry:
+		// This is a RETRY (from Failed)
+		v.Status.RetryCount++
+	}
 
 	// Reset status fields (Conditions, ErrorMessage) to prepare for a new update cycle.
 	v.Status.Conditions = []metav1.Condition{}

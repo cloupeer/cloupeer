@@ -42,3 +42,23 @@ func SetCondition(v *iovv1alpha1.Vehicle, conditionType string, status metav1.Co
 		LastTransitionTime: metav1.Now(),
 	})
 }
+
+func FindLatestCondition(conditions []metav1.Condition) *metav1.Condition {
+	var latestCond *metav1.Condition
+
+	for i := range conditions {
+		if conditions[i].Type == iovv1alpha1.ConditionTypeReady {
+			continue
+		}
+
+		if latestCond == nil || !conditions[i].LastTransitionTime.Before(&latestCond.LastTransitionTime) {
+			latestCond = &conditions[i]
+		}
+	}
+
+	if latestCond != nil {
+		return latestCond.DeepCopy()
+	}
+
+	return nil
+}

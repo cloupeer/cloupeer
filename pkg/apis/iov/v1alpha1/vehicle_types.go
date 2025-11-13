@@ -48,6 +48,10 @@ type VehicleStatus struct {
 	// +optional
 	ErrorMessage string `json:"errorMessage,omitempty"`
 
+	// RetryCount tracks the number of automated retries for the current update.
+	// +optional
+	RetryCount int32 `json:"retryCount,omitempty"`
+
 	// The last time the vehicle was seen by the control plane.
 	// +optional
 	LastSeenTime *metav1.Time `json:"lastSeenTime,omitempty"`
