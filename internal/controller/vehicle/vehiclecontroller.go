@@ -3,12 +3,14 @@ package vehicle
 import (
 	"context"
 
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	iovv1alpha1 "cloupeer.io/cloupeer/pkg/apis/iov/v1alpha1"
@@ -64,7 +66,7 @@ func (r *VehicleReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	logger := log.FromContext(ctx)
 	logger.Info("Starting reconcile cycle...")
 
-	// 1. Fetch the Vehicle resource
+	// Fetch the Vehicle resource
 	var vehicle iovv1alpha1.Vehicle
 	if err := r.Get(ctx, req.NamespacedName, &vehicle); err != nil {
 		// We use client.IgnoreNotFound(err) to gracefully handle
@@ -83,13 +85,23 @@ func (r *VehicleReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	// 2. Create a deep copy of the original object.
+	// Create a deep copy of the original object.
 	// This is the best practice for using r.Status().Patch().
 	// client.MergeFrom() will calculate the "diff" between originalVehicle
 	// and the modified 'vehicle' object.
 	originalVehicle := vehicle.DeepCopy()
 
-	// 3. Run the sub-reconciler chain.
+	// Handle Finalizer logic
+	if !vehicle.ObjectMeta.DeletionTimestamp.IsZero() {
+		return r.handleVehicleDeletion(ctx, logger, &vehicle, originalVehicle)
+	}
+
+	// --- The object is NOT being deleted ---
+	if !controllerutil.ContainsFinalizer(&vehicle, iovv1alpha1.VehicleFinalizer) {
+		return r.addFinalizer(ctx, logger, &vehicle, originalVehicle)
+	}
+
+	// Run the sub-reconciler chain.
 	// We aggregate the result. The first request for a delayed requeue wins.
 	var aggregatedResult ctrl.Result
 	for _, sub := range r.subReconcilers {
@@ -113,7 +125,7 @@ func (r *VehicleReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		}
 	}
 
-	// 4. Compare and Patch Spec (if changed)
+	// Compare and Patch Spec (if changed)
 	// We must compare *before* patching to avoid unnecessary API calls.
 	// We compare Spec separately because it uses a different API endpoint
 	// than the Status subresource.
@@ -125,7 +137,7 @@ func (r *VehicleReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		}
 	}
 
-	// 5. Compare and Patch Status (if changed)
+	// Compare and Patch Status (if changed)
 	// This is the critical check to prevent infinite reconciliation loops.
 	// If the status has not changed, we DO NOT patch.
 	if !equality.Semantic.DeepEqual(originalVehicle.Status, vehicle.Status) {
@@ -144,8 +156,80 @@ func (r *VehicleReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		}
 	}
 
-	// 6. Return the aggregated result (likely just an empty result or a RequeueAfter).
+	// Return the aggregated result (likely just an empty result or a RequeueAfter).
 	return aggregatedResult, nil
+}
+
+func (r *VehicleReconciler) handleVehicleDeletion(ctx context.Context, logger logr.Logger, vehicle, originalVehicle *iovv1alpha1.Vehicle) (ctrl.Result, error) {
+	// --- The object is being deleted ---
+	if controllerutil.ContainsFinalizer(vehicle, iovv1alpha1.VehicleFinalizer) {
+		logger.Info("Handling Finalizer: Deletion detected, running cleanup logic...")
+
+		// Execute our cleanup logic
+		if err := r.clearVehicle(ctx, vehicle); err != nil {
+			// If cleanup fails, return the error. Kubernetes will retry.
+			logger.Error(err, "Failed to execute deletion handler")
+			r.Recorder.Event(vehicle, corev1.EventTypeWarning, "CleanupFailed", err.Error())
+			return ctrl.Result{}, err
+		}
+
+		// Cleanup successful, remove the Finalizer
+		logger.Info("Cleanup successful, removing Finalizer.")
+		controllerutil.RemoveFinalizer(vehicle, iovv1alpha1.VehicleFinalizer)
+
+		// Patch the object to remove the finalizer
+		// We use the originalVehicle from the start of the reconcile
+		if err := r.Patch(ctx, vehicle, client.MergeFrom(originalVehicle)); err != nil {
+			logger.Error(err, "Failed to remove Finalizer by patching")
+			return ctrl.Result{}, err
+		}
+
+		// Stop the reconcile loop, as the object is being deleted
+		return ctrl.Result{}, nil
+	}
+
+	// Finalizer already removed, nothing to do.
+	return ctrl.Result{}, nil
+}
+
+func (r *VehicleReconciler) addFinalizer(ctx context.Context, logger logr.Logger, vehicle, originalVehicle *iovv1alpha1.Vehicle) (ctrl.Result, error) {
+	logger.Info("Adding Finalizer to new/updated Vehicle.")
+	controllerutil.AddFinalizer(vehicle, iovv1alpha1.VehicleFinalizer)
+
+	// Patch the object to add the finalizer
+	if err := r.Patch(ctx, vehicle, client.MergeFrom(originalVehicle)); err != nil {
+		logger.Error(err, "Failed to add Finalizer by patching")
+		return ctrl.Result{}, err
+	}
+
+	// Return immediately. The Patch operation will trigger a
+	// new Reconcile event. This ensures we process the
+	// sub-reconcilers only after the finalizer is confirmed.
+	return ctrl.Result{}, nil
+}
+
+// clearVehicle contains the business logic required to clean up
+// before a Vehicle resource is deleted.
+func (r *VehicleReconciler) clearVehicle(ctx context.Context, v *iovv1alpha1.Vehicle) error {
+	logger := log.FromContext(ctx)
+
+	// --- Simulate cleanup logic ---
+	// In a real-world scenario, this is where you would:
+	// 1. Call the vehicle's telematics API to remotely unbind/deactivate.
+	// 2. Notify an external inventory system.
+	// 3. Delete associated resources (e.g., cloud-side digital twin).
+
+	logger.Info("Simulating vehicle unbinding...", "vehicleName", v.Name)
+
+	// Simulate a process that could fail.
+	// if v.Name == "vh-fail-delete" {
+	//     return errors.New("simulated telematics API failure")
+	// }
+
+	// Simulate success
+	logger.Info("Vehicle unbinding simulation complete.")
+
+	return nil
 }
 
 func (r *VehicleReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
