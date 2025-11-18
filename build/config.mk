@@ -77,12 +77,13 @@ export GOLANG_VERSION           ?= 1.25.1  # The Go version for Cloupeer
 export ENVTEST_K8S_VERSION      ?= 1.31.10 # The K8s version for envtest assets
 
 # Tool Versions
-export KUSTOMIZE_VERSION        ?= 5.4.3
+export KUSTOMIZE_VERSION        ?= 5.8.0
 export CONTROLLER_GEN_VERSION   ?= 0.16.1
 export ENVTEST_VERSION          ?= # Use a specific version number
 export GOLANGCI_LINT_VERSION    ?= 1.64.8
 export OPERATOR_SDK_VERSION     ?= 1.39.2
 export OPM_VERSION              ?= 1.23.0
+export HELM_VERSION             ?= 3.14.0
 
 
 # Tool Paths
@@ -93,6 +94,7 @@ export ENVTEST          := $(TOOLS_DIR)/setup-envtest
 export GOLANGCI_LINT    := $(TOOLS_DIR)/golangci-lint-v$(GOLANGCI_LINT_VERSION)
 export OPERATOR_SDK     := $(TOOLS_DIR)/operator-sdk-v$(OPERATOR_SDK_VERSION)
 export OPM              := $(TOOLS_DIR)/opm-v$(OPM_VERSION)
+export HELM             := $(TOOLS_DIR)/helm-v$(HELM_VERSION)
 
 # A consolidated list of all tool names, used for dependency management in the main Makefile.
 TOOLS := kustomize controller-gen envtest golangci-lint operator-sdk opm
@@ -105,3 +107,11 @@ TOOLS := kustomize controller-gen envtest golangci-lint operator-sdk opm
 export IMG          ?= 
 export BUNDLE_IMG   ?= 
 export CATALOG_IMG  ?= 
+
+
+#@ Infrastructure Components
+# ------------------------------------------------------------------------------
+# List of components that should maintain static configurations.
+# These components are exempt from dynamic version/image injection during deployment
+# to prevent stateful workload restarts (e.g. StatefulSet forbidden updates).
+export INFRA_COMPONENTS ?= emqx mysql redis prometheus

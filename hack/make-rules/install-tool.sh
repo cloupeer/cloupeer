@@ -71,7 +71,7 @@ gobin=$(go env GOBIN)
 
 case "$TOOL_NAME" in
     kustomize)
-        go install "sigs.k.io/kustomize/kustomize/v5@v${TOOL_VERSION}"
+        go install "sigs.k8s.io/kustomize/kustomize/v5@v${TOOL_VERSION}"
         mv "${gobin}/kustomize" "${TARGET_FILE}"
         ;;
     controller-gen)
@@ -100,6 +100,38 @@ case "$TOOL_NAME" in
         URL="https://github.com/operator-framework/operator-registry/releases/download/v${OPM_VERSION}/${OS}-${ARCH}-opm"
         curl -sSLo "${TARGET_FILE}" "${URL}"
         chmod +x "${TARGET_FILE}"
+        ;;
+    helm)
+        # Add this block for Helm
+        OS=$(go env GOOS)
+        ARCH=$(go env GOARCH)
+        
+        # --- FIX: Corrected URL from 'httpssl://' to 'https://' ---
+        URL="https://get.helm.sh/helm-v${TOOL_VERSION}-${OS}-${ARCH}.tar.gz"
+        
+        info "   -> Downloading Helm from: ${URL}"
+        tmp_tar="/tmp/helm-v${TOOL_VERSION}.tar.gz"
+        tmp_dir="/tmp/helm-v${TOOL_VERSION}-extracted"
+
+        if ! curl -sSLo "${tmp_tar}" "${URL}"; then
+            error "Helm download failed from ${URL}. Check URL or network."
+        fi
+        
+        mkdir -p "${tmp_dir}"
+        tar -zxvf "${tmp_tar}" -C "${tmp_dir}"
+        
+        # Find the binary regardless of the exact extracted folder name
+        helm_binary=$(find "${tmp_dir}" -type f -name helm)
+        
+        if [[ -z "${helm_binary}" ]]; then
+            error "Could not find 'helm' binary in downloaded tarball."
+        fi
+
+        mv "${helm_binary}" "${TARGET_FILE}"
+        
+        # Clean up temp files
+        rm -f "${tmp_tar}"
+        rm -rf "${tmp_dir}"
         ;;
     *)
         error "Unknown tool to install: ${TOOL_NAME}"

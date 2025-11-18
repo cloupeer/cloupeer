@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -46,6 +47,7 @@ func (p *Publisher) Run() error {
 
 	cfg := autopaho.ClientConfig{
 		ServerUrls:                    []*url.URL{serverUrl},
+		TlsCfg:                        &tls.Config{InsecureSkipVerify: true},
 		KeepAlive:                     60,
 		CleanStartOnInitialConnection: false,
 		SessionExpiryInterval:         60,

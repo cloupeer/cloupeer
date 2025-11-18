@@ -1,0 +1,29 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: emqx-wss-ingress
+  namespace: cloupeer-system
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    cert-manager.io/cluster-issuer: "cloupeer-prod-issuer"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - mqtt.cloupeer.io
+      secretName: cloupeer-mqtt-tls
+  rules:
+    - host: mqtt.cloupeer.io
+      http:
+        paths:
+          - path: /mqtt
+            pathType: Prefix
+            backend:
+              service:
+                name: emqx
+                port:
+                  number: 8083

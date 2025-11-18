@@ -1,0 +1,4 @@
+resources:
+  - emqx-generated.yaml
+  - ingress-wss.yaml
+  - ingress-dashboard.yaml

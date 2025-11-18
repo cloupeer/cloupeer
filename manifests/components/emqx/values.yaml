@@ -1,0 +1,20 @@
+replicaCount: 3
+
+image:
+  repository: emqx/emqx
+  tag: "5.8.8"
+  pullPolicy: IfNotPresent
+
+emqxConfig:
+  EMQX_CLUSTER__DISCOVERY_STRATEGY: "dns"
+  EMQX_DASHBOARD__DEFAULT_USERNAME: "admin"
+  EMQX_DASHBOARD__DEFAULT_PASSWORD: "public"
+
+ingress:
+  dashboard:
+    enabled: false
+  mqtt:
+    enabled: false
+
+persistence:
+  enabled: false

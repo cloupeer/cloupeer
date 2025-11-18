@@ -151,6 +151,20 @@ help: ## Display this help.
 
 ##@ Development
 
+.PHONY: manifests-emqx
+manifests-emqx: $(HELM) ## Generate K8s manifests for EMQX from its Helm chart.
+	@echo "Adding EMQX Helm repository..."
+	@$(HELM) repo add emqx https://repos.emqx.io/charts
+	@$(HELM) repo update
+	@echo "Generating EMQX manifests from Helm chart..."
+	@mkdir -p manifests/components/emqx/base
+	@$(HELM) template emqx emqx/emqx \
+		--version 5.8.8 \
+		--namespace cloupeer-system \
+		-f manifests/components/emqx/values.yaml \
+		> manifests/components/emqx/base/emqx-generated.yaml
+	@echo "EMQX manifests generated successfully."
+
 .PHONY: manifests
 manifests: $(CONTROLLER_GEN) ## Generate K8s manifests (CRDs, RBAC, etc.) in `config/`.
 	@./hack/make-rules/generate.sh manifests

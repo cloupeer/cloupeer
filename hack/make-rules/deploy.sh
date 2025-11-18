@@ -104,15 +104,22 @@ run_deploy() {
             error "Kustomize directory not found for component '${component_name}' at: ${kustomize_path}"
         fi
 
-        local img_tag="${IMG:-${PUBLIC_REGISTRY}/${component_name}:${version_tag}}"
-        info "    Setting image to: ${img_tag}"
-        info "    Setting version label to: ${version_tag}"
+        # --- Logic Optimized: Check if component is Infrastructure ---
+        # Use regex match against the space-padded list from config.mk
+        if [[ " ${INFRA_COMPONENTS} " =~ " ${component_name} " ]]; then
+            info "    [INFRA] Skipping dynamic injection for static component: ${component_name}"
+        else
+            # [APP] Inject dynamic version and image tag for business applications
+            local img_tag="${IMG:-${PUBLIC_REGISTRY}/${component_name}:${version_tag}}"
+            info "    [APP] Setting image to: ${img_tag}"
+            info "    [APP] Setting version label to: ${version_tag}"
 
-        (
-            cd "${kustomize_path}"
-            "${KUSTOMIZE}" edit set image "${component_name}"="${img_tag}"
-            "${KUSTOMIZE}" edit set label "app.kubernetes.io/version:${version_tag}"
-        )
+            (
+                cd "${kustomize_path}"
+                "${KUSTOMIZE}" edit set image "${component_name}"="${img_tag}"
+                "${KUSTOMIZE}" edit set label "app.kubernetes.io/version:${version_tag}"
+            )
+        fi
     fi
 
     info "    Applying manifests from: ${kustomize_path}"

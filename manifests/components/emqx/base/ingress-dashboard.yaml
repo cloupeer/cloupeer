@@ -1,0 +1,25 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: emqx-dashboard-ingress
+  namespace: cloupeer-system
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    cert-manager.io/cluster-issuer: "cloupeer-prod-issuer"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - "emqx.cloupeer.io"
+      secretName: emqx-dashboard-tls
+  rules:
+    - host: "emqx.cloupeer.io"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: emqx
+                port:
+                  number: 18083 # 指向 Dashboard 18083
