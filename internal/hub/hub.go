@@ -2,13 +2,17 @@ package hub
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"net"
 	"net/http"
+	"net/url"
 	"sync"
 	"time"
 
+	"github.com/eclipse/paho.golang/autopaho"
+	"github.com/eclipse/paho.golang/paho"
 	"google.golang.org/grpc"
 	"k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/scheme"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -20,11 +24,16 @@ import (
 )
 
 type HubServer struct {
-	namespace  string
-	httpAddr   string
-	grpcAddr   string
-	httpClient *http.Client
-	k8sclient  controllerclient.Client
+	namespace       string
+	httpAddr        string
+	grpcAddr        string
+	mqttBroker      string
+	mqttUsername    string
+	mqttPassword    string
+	mqttTopicPrefix string
+	k8sclient       controllerclient.Client
+	httpClient      *http.Client
+	mqttMgr         *autopaho.ConnectionManager
 }
 
 func (s *HubServer) Run(ctx context.Context) error {
@@ -33,10 +42,15 @@ func (s *HubServer) Run(ctx context.Context) error {
 		return err
 	}
 
+	if err := s.initMQTTClient(ctx); err != nil {
+		return err
+	}
+	defer s.mqttMgr.Disconnect(context.Background())
+
 	var wg sync.WaitGroup
 	errChan := make(chan error, 2)
 
-	// --- 1. Start HTTP Server (Health/Metrics) ---
+	// 1. Start HTTP Server (Health/Metrics)
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -45,13 +59,21 @@ func (s *HubServer) Run(ctx context.Context) error {
 		}
 	}()
 
-	// --- 2. Start gRPC Server (Business Logic) ---
+	// 2. Start gRPC Server (Business Logic)
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		if err := s.runGRPCServer(ctx); err != nil {
 			errChan <- fmt.Errorf("gRPC server error: %w", err)
 		}
+	}()
+
+	// 3. MQTT Connection Monitor (Optional but good for logging)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		<-s.mqttMgr.Done() // 等待 MQTT 连接彻底关闭（通常发生在 Disconnect 调用后）
+		log.Info("MQTT connection manager stopped")
 	}()
 
 	// Wait for context cancellation (shutdown signal)
@@ -114,7 +136,7 @@ func (s *HubServer) runGRPCServer(ctx context.Context) error {
 	}
 
 	grpcServer := grpc.NewServer()
-	pb.RegisterHubServiceServer(grpcServer, &grpcHandler{})
+	pb.RegisterHubServiceServer(grpcServer, &grpcHandler{parent: s})
 
 	log.Info("cpeer-hub gRPC listening", "address", s.grpcAddr, "namespace", s.namespace)
 
@@ -124,6 +146,61 @@ func (s *HubServer) runGRPCServer(ctx context.Context) error {
 	}()
 
 	return grpcServer.Serve(lis)
+}
+
+func (s *HubServer) initMQTTClient(ctx context.Context) error {
+	brokerURL, err := url.Parse(s.mqttBroker)
+	if err != nil {
+		return fmt.Errorf("invalid mqtt broker url: %w", err)
+	}
+
+	clientID := fmt.Sprintf("cpeer-hub-%s", s.namespace)
+
+	cfg := autopaho.ClientConfig{
+		ServerUrls: []*url.URL{brokerURL},
+		TlsCfg:     &tls.Config{InsecureSkipVerify: true},
+		KeepAlive:  20,
+		// 自动重连退避策略
+		ReconnectBackoff:              autopaho.NewConstantBackoff(3 * time.Second),
+		CleanStartOnInitialConnection: false,
+		SessionExpiryInterval:         60,
+		ConnectUsername:               s.mqttUsername,
+		ConnectPassword:               []byte(s.mqttPassword),
+		OnConnectionUp: func(cm *autopaho.ConnectionManager, c *paho.Connack) {
+			log.Info("Connected to MQTT Broker", "server", s.mqttBroker)
+		},
+		OnConnectError: func(err error) {
+			log.Error(err, "Failed to connect to MQTT Broker", "server", s.mqttBroker)
+		},
+		ClientConfig: paho.ClientConfig{
+			ClientID: clientID,
+			OnClientError: func(err error) {
+				log.Error(err, "MQTT Client Error")
+			},
+			OnServerDisconnect: func(d *paho.Disconnect) {
+				if d.Properties != nil {
+					log.Info("Server requested disconnect", "reason", d.Properties.ReasonString)
+				} else {
+					log.Info("Server requested disconnect", "reasonCode", d.ReasonCode)
+				}
+			},
+		},
+	}
+
+	log.Info("Connecting to MQTT Broker...", "url", s.mqttBroker, "clientID", clientID)
+
+	// NewConnection 会立即尝试连接，并启动后台 goroutine 进行维护
+	s.mqttMgr, err = autopaho.NewConnection(ctx, cfg)
+	if err != nil {
+		return fmt.Errorf("failed to create mqtt connection manager: %w", err)
+	}
+
+	// 等待第一次连接成功（可选，为了确保启动时服务可用）
+	if err := s.mqttMgr.AwaitConnection(ctx); err != nil {
+		return fmt.Errorf("failed to establish initial mqtt connection: %w", err)
+	}
+
+	return nil
 }
 
 func (s *HubServer) initK8sClient() error {

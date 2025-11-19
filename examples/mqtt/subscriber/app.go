@@ -139,5 +139,6 @@ func (s *Subscriber) OnPublishReceived(pr paho.PublishReceived) (bool, error) {
 	}
 
 	log.Printf("Received message (Count: %d) on topic: %s\n", m.Count, pr.Packet.Topic)
+	log.Println("Received message:", string(pr.Packet.Payload))
 	return true, nil
 }

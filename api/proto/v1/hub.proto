@@ -30,3 +30,19 @@ message SendCommandResponse {
   // Human-readable message, useful for debugging or status updates.
   string message = 2;
 }
+
+// AgentCommand defines the standard message format exchanged between Hub and Agent via MQTT.
+message AgentCommand {
+  // Unique identifier for the command trace.
+  // Use json_name to ensure the JSON key is "commandID" (not commandId).
+  string command_id = 1 [json_name = "commandID"];
+
+  // Type of the command (e.g., "OTA", "Reboot").
+  string command_type = 2 [json_name = "commandType"];
+
+  // Parameters for the command execution.
+  map<string, string> parameters = 3;
+
+  // Timestamp when the command was issued (Unix timestamp).
+  int64 timestamp = 4;
+}
