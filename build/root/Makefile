@@ -177,6 +177,12 @@ generate: $(CONTROLLER_GEN) ## Generate deepcopy code (zz_generated.deepcopy.go)
 dockerfiles: $(addprefix gen-dockerfile-,$(COMPONENTS)) ## Generate all component Dockerfiles in `_output/images/`.
 	@# This is an aggregator target, the real work is in the dependencies.
 
+.PHONY: protoc
+protoc: 
+	@protoc --go_out=. --go_opt=paths=source_relative \
+    --go-grpc_out=. --go-grpc_opt=paths=source_relative \
+    api/proto/v1/hub.proto
+
 .PHONY: fmt
 fmt: ## Format Go code 
 	@./hack/make-rules/verify.sh fmt

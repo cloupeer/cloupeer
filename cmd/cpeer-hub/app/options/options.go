@@ -11,7 +11,8 @@ import (
 
 type HubOptions struct {
 	Namespace string
-	Addr      string
+	HttpAddr  string
+	GrpcAddr  string
 	Log       *log.Options
 }
 
@@ -19,8 +20,9 @@ var _ app.NamedFlagSetOptions = (*HubOptions)(nil)
 
 func NewHubOptions() *HubOptions {
 	o := &HubOptions{
-		Namespace: "default",
-		Addr:      ":9090",
+		Namespace: "cloupeer-system",
+		HttpAddr:  ":8080",
+		GrpcAddr:  ":8081",
 		Log:       log.NewOptions(),
 	}
 
@@ -33,7 +35,8 @@ func (o *HubOptions) Flags() cliflag.NamedFlagSets {
 	// Add flags for Hub specific options
 	fs := fss.FlagSet("Hub")
 	fs.StringVar(&o.Namespace, "namespace", o.Namespace, "The Kubernetes namespace to watch for Cloupeer resources.")
-	fs.StringVar(&o.Addr, "addr", o.Addr, "The address the cpeer-hub HTTP server should listen on.")
+	fs.StringVar(&o.HttpAddr, "http-addr", o.HttpAddr, "The address the cpeer-hub HTTP server should listen on.")
+	fs.StringVar(&o.GrpcAddr, "grpc-addr", o.GrpcAddr, "The address the cpeer-hub gRPC server should listen on.")
 
 	// Add flags for logging
 	o.Log.AddFlags(fss.FlagSet("Log"))
@@ -53,6 +56,7 @@ func (o *HubOptions) Validate() error {
 func (o *HubOptions) Config() (*hub.Config, error) {
 	return &hub.Config{
 		Namespace: o.Namespace,
-		Addr:      o.Addr,
+		HttpAddr:  o.HttpAddr,
+		GrpcAddr:  o.GrpcAddr,
 	}, nil
 }

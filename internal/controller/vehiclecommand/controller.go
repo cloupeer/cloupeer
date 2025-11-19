@@ -3,8 +3,9 @@ package vehiclecommand
 import (
 	"context"
 	"fmt"
-	"time"
 
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -13,31 +14,25 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
+	pb "cloupeer.io/cloupeer/api/proto/v1"
 	iovv1alpha1 "cloupeer.io/cloupeer/pkg/apis/iov/v1alpha1"
 )
-
-// HubClient defines the interface for communicating with the Cloupeer Hub.
-// This allows us to mock the gRPC interaction for now.
-type HubClient interface {
-	// SendCommand transmits the command payload to the Hub.
-	SendCommand(ctx context.Context, cmd *iovv1alpha1.VehicleCommand) error
-}
 
 // Reconciler reconciles a VehicleCommand object
 type Reconciler struct {
 	client.Client
-	Scheme    *runtime.Scheme
-	Recorder  record.EventRecorder
-	HubClient HubClient
+	Scheme   *runtime.Scheme
+	Recorder record.EventRecorder
+	HubAddr  string
 }
 
 // NewReconciler creates a new Reconciler for VehicleCommand.
-func NewReconciler(cli client.Client, sche *runtime.Scheme, recorder record.EventRecorder) *Reconciler {
+func NewReconciler(cli client.Client, sche *runtime.Scheme, recorder record.EventRecorder, hubAddr string) *Reconciler {
 	return &Reconciler{
-		Client:    cli,
-		Scheme:    sche,
-		Recorder:  recorder,
-		HubClient: &mockHubClient{}, // TODO: Inject real gRPC client later
+		Client:   cli,
+		Scheme:   sche,
+		Recorder: recorder,
+		HubAddr:  hubAddr, // TODO: Inject real gRPC client later
 	}
 }
 
@@ -83,14 +78,46 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	case iovv1alpha1.CommandPhasePending:
 		logger.Info("Processing Pending command", "type", cmd.Spec.Command, "vehicle", cmd.Spec.VehicleName)
 
-		// Send to Hub
-		if err := r.HubClient.SendCommand(ctx, &cmd); err != nil {
-			logger.Error(err, "Failed to send command to Hub")
-
-			// Update status to Failed if it's a non-retriable error (simplified here)
-			// For now, we let controller-runtime retry via exponential backoff by returning error
+		// 建立 gRPC 连接
+		// 在生产环境中，最好维护一个全局单例的 Connection，而不是每次 Reconcile 都 Dial。
+		// 但为了演示清晰和简单，我们这里采用短连接（或者依靠 gRPC 内部的连接池机制）。
+		// 使用 Insecure 凭证，因为集群内部通过 Service 通信通常是可信网络，或者是通过 mTLS (Linkerd/Istio) 处理的。
+		conn, err := grpc.NewClient(r.HubAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		if err != nil {
+			logger.Error(err, "Failed to connect to Hub")
 			return ctrl.Result{}, err
 		}
+		defer conn.Close()
+
+		hubClient := pb.NewHubServiceClient(conn)
+
+		req := &pb.SendCommandRequest{
+			VehicleId:   cmd.Spec.VehicleName,
+			CommandType: string(cmd.Spec.Command),
+			Parameters:  cmd.Spec.Parameters,
+		}
+
+		// Send to Hub
+		resp, err := hubClient.SendCommand(ctx, req)
+		if err != nil {
+			logger.Error(err, "gRPC SendCommand call failed")
+			r.Recorder.Event(&cmd, corev1.EventTypeWarning, "SendFailed", err.Error())
+			return ctrl.Result{}, err
+		}
+
+		if !resp.Accepted {
+			logger.Info("Hub rejected the command", "reason", resp.Message)
+			r.Recorder.Eventf(&cmd, corev1.EventTypeWarning, "Rejected", "Hub rejected: %s", resp.Message)
+			// 如果 Hub 明确拒绝，可能不需要重试，而是标记为 Failed？
+			// 这里我们暂时按 Failed 处理
+			cmd.Status.Phase = iovv1alpha1.CommandPhaseFailed
+			cmd.Status.Message = fmt.Sprintf("Hub rejected: %s", resp.Message)
+			r.Status().Update(ctx, &cmd)
+			return ctrl.Result{}, nil
+		}
+
+		// 4. 成功，更新状态
+		logger.Info("Command successfully sent to Hub", "hubMessage", resp.Message)
 
 		// Success: Update Phase to Sent
 		now := metav1.Now()
@@ -125,21 +152,4 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&iovv1alpha1.VehicleCommand{}).
 		Complete(r)
-}
-
-// --- Mock Implementation (Temporary) ---
-
-type mockHubClient struct{}
-
-func (m *mockHubClient) SendCommand(ctx context.Context, cmd *iovv1alpha1.VehicleCommand) error {
-	// Simulate gRPC call latency
-	time.Sleep(100 * time.Millisecond)
-
-	// In real implementation, this would call:
-	// pb.NewHubClient(conn).SendCommand(...)
-
-	fmt.Printf(">> [MOCK gRPC] Sending Command to Hub: Vehicle=%s Type=%s Payload=%v\n",
-		cmd.Spec.VehicleName, cmd.Spec.Command, cmd.Spec.Parameters)
-
-	return nil
 }

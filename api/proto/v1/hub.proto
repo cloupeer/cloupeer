@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package v1;
+
+option go_package = "cloupeer.io/cloupeer/api/proto/v1";
+
+// HubService defines the RPC interface for the Cloupeer Hub.
+service HubService {
+  // SendCommand transmits a command from the Controller to the Hub.
+  // The Hub is then responsible for forwarding this to the target vehicle (e.g. via MQTT).
+  rpc SendCommand (SendCommandRequest) returns (SendCommandResponse) {}
+}
+
+// SendCommandRequest mirrors the VehicleCommand CRD spec.
+message SendCommandRequest {
+  // The unique identifier of the vehicle (usually the Vehicle CR name).
+  string vehicle_id = 1;
+  
+  // The type of command (e.g., "OTA", "Reboot").
+  string command_type = 2;
+  
+  // Optional parameters for the command.
+  map<string, string> parameters = 3;
+}
+
+message SendCommandResponse {
+  // Indicates if the Hub successfully accepted the command for delivery.
+  bool accepted = 1;
+  
+  // Human-readable message, useful for debugging or status updates.
+  string message = 2;
+}

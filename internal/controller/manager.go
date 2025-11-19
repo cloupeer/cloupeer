@@ -28,7 +28,7 @@ type Controller interface {
 	SetupWithManager(ctx context.Context, mgr ctrl.Manager) error
 }
 
-func NewControllerManager(ctx context.Context, kubeconfig *rest.Config, healthProbe string) (manager.Manager, error) {
+func NewControllerManager(ctx context.Context, kubeconfig *rest.Config, healthProbe string, hubAddr string) (manager.Manager, error) {
 	mgr, err := ctrl.NewManager(kubeconfig, ctrl.Options{
 		Scheme:                 cloupeerScheme,
 		Metrics:                server.Options{BindAddress: "0"},
@@ -49,7 +49,7 @@ func NewControllerManager(ctx context.Context, kubeconfig *rest.Config, healthPr
 		return nil, err
 	}
 
-	if err := setupControllers(ctx, mgr); err != nil {
+	if err := setupControllers(ctx, mgr, hubAddr); err != nil {
 		return nil, err
 	}
 
@@ -57,7 +57,7 @@ func NewControllerManager(ctx context.Context, kubeconfig *rest.Config, healthPr
 }
 
 // setupControllers initializes and registers all controllers with the manager.
-func setupControllers(ctx context.Context, mgr manager.Manager) error {
+func setupControllers(ctx context.Context, mgr manager.Manager, hubAddr string) error {
 	cli := mgr.GetClient()
 	sche := mgr.GetScheme()
 
@@ -68,7 +68,7 @@ func setupControllers(ctx context.Context, mgr manager.Manager) error {
 	// Register Controllers
 	controllers := []Controller{
 		// vehicle.NewReconciler(cli, sche, vehicleRecorder),
-		vehiclecommand.NewReconciler(cli, sche, commandRecorder),
+		vehiclecommand.NewReconciler(cli, sche, commandRecorder, hubAddr),
 	}
 
 	for _, ctl := range controllers {
