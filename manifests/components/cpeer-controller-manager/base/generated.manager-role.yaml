@@ -14,6 +14,7 @@ rules:
 - apiGroups:
   - iov.cloupeer.io
   resources:
+  - vehiclecommands
   - vehicles
   verbs:
   - create
@@ -26,12 +27,14 @@ rules:
 - apiGroups:
   - iov.cloupeer.io
   resources:
+  - vehiclecommands/finalizers
   - vehicles/finalizers
   verbs:
   - update
 - apiGroups:
   - iov.cloupeer.io
   resources:
+  - vehiclecommands/status
   - vehicles/status
   verbs:
   - get

@@ -12,7 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
-	"cloupeer.io/cloupeer/internal/controller/vehicle"
+	"cloupeer.io/cloupeer/internal/controller/vehiclecommand"
 	iovv1alpha1 "cloupeer.io/cloupeer/pkg/apis/iov/v1alpha1"
 	"cloupeer.io/cloupeer/pkg/log"
 )
@@ -61,14 +61,14 @@ func setupControllers(ctx context.Context, mgr manager.Manager) error {
 	cli := mgr.GetClient()
 	sche := mgr.GetScheme()
 
-	// Get an EventRecorder for the vehicle controller.
-	// The name "cloupeer-vehicle-controller" will appear in the
-	// `reportingComponent` field of the created Event objects.
-	recorder := mgr.GetEventRecorderFor("cloupeer-vehicle-controller")
+	// EventRecorders for the controllers.
+	// vehicleRecorder := mgr.GetEventRecorderFor("cloupeer-vehicle-controller")
+	commandRecorder := mgr.GetEventRecorderFor("cpeer-command-controller")
 
 	// Register Controllers
 	controllers := []Controller{
-		vehicle.NewReconciler(cli, sche, recorder),
+		// vehicle.NewReconciler(cli, sche, vehicleRecorder),
+		vehiclecommand.NewReconciler(cli, sche, commandRecorder),
 	}
 
 	for _, ctl := range controllers {
