@@ -59,3 +59,25 @@ message AgentCommandStatus {
   // 附加信息 (例如错误原因)
   string message = 3 [json_name = "message"];
 }
+
+message GetFirmwareURLRequest {
+  // Vehicle ID
+  string vehicle_id = 1 [json_name = "vehicleID"];
+  
+  // The version requested (e.g. from the OTA command parameters)
+  string desired_version = 2 [json_name = "desiredVersion"];
+  
+  // Unique request ID for correlation (e.g. UUID)
+  string request_id = 3 [json_name = "requestID"];
+}
+
+message GetFirmwareURLResponse {
+  // Corresponds to the request_id
+  string request_id = 1 [json_name = "requestID"];
+  
+  // The download URL
+  string download_url = 2 [json_name = "downloadURL"];
+  
+  // Error message if any
+  string error_message = 3 [json_name = "errorMessage"];
+}

@@ -29,5 +29,6 @@ func (cfg *Config) NewAgent() (*Agent, error) {
 		mqttPassword:    cfg.MqttPassword,
 		mqttTopicPrefix: cfg.MqttTopicPrefix,
 		httpClient:      &http.Client{Timeout: 10 * time.Second},
+		pendingRequests: make(map[string]chan string),
 	}, nil
 }
