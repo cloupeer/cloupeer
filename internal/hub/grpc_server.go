@@ -29,11 +29,8 @@ func (h *grpcHandler) SendCommand(ctx context.Context, req *pb.SendCommandReques
 	topic := fmt.Sprintf("%s/%s", h.parent.mqttTopicPrefix, req.VehicleId)
 
 	// 2. 构造 Payload (使用生成的 PB 结构体)
-	// CommandID 暂时由 Hub 生成一个简单的 Trace ID
-	cmdID := fmt.Sprintf("cmd-%s-%s-%d", req.VehicleId, req.CommandType, time.Now().UnixNano())
-
 	pbPayload := &pb.AgentCommand{
-		CommandId:   cmdID,
+		CommandName: req.CommandName,
 		CommandType: req.CommandType,
 		Parameters:  req.Parameters,
 		Timestamp:   time.Now().Unix(),

@@ -13,14 +13,17 @@ service HubService {
 
 // SendCommandRequest mirrors the VehicleCommand CRD spec.
 message SendCommandRequest {
+  // K8s CRD Name, used as the unique Trace ID.
+  string command_name = 1;
+
   // The unique identifier of the vehicle (usually the Vehicle CR name).
-  string vehicle_id = 1;
+  string vehicle_id = 2;
   
   // The type of command (e.g., "OTA", "Reboot").
-  string command_type = 2;
+  string command_type = 3;
   
   // Optional parameters for the command.
-  map<string, string> parameters = 3;
+  map<string, string> parameters = 4;
 }
 
 message SendCommandResponse {
@@ -34,8 +37,7 @@ message SendCommandResponse {
 // AgentCommand defines the standard message format exchanged between Hub and Agent via MQTT.
 message AgentCommand {
   // Unique identifier for the command trace.
-  // Use json_name to ensure the JSON key is "commandID" (not commandId).
-  string command_id = 1 [json_name = "commandID"];
+  string command_name = 1 [json_name = "commandName"];
 
   // Type of the command (e.g., "OTA", "Reboot").
   string command_type = 2 [json_name = "commandType"];
@@ -45,4 +47,15 @@ message AgentCommand {
 
   // Timestamp when the command was issued (Unix timestamp).
   int64 timestamp = 4;
+}
+
+// Edge -> Cloud
+message AgentCommandStatus {
+  string command_name = 1 [json_name = "commandName"];
+  
+  // 状态枚举: "Received", "Running", "Succeeded", "Failed"
+  string status = 2 [json_name = "status"];
+  
+  // 附加信息 (例如错误原因)
+  string message = 3 [json_name = "message"];
 }

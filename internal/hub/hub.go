@@ -14,12 +14,16 @@ import (
 	"github.com/eclipse/paho.golang/autopaho"
 	"github.com/eclipse/paho.golang/paho"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/encoding/protojson"
 	"k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/scheme"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	controllerclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 
 	pb "cloupeer.io/cloupeer/api/proto/v1"
+	iovv1alpha1 "cloupeer.io/cloupeer/pkg/apis/iov/v1alpha1"
 	"cloupeer.io/cloupeer/pkg/log"
 )
 
@@ -168,6 +172,19 @@ func (s *HubServer) initMQTTClient(ctx context.Context) error {
 		ConnectPassword:               []byte(s.mqttPassword),
 		OnConnectionUp: func(cm *autopaho.ConnectionManager, c *paho.Connack) {
 			log.Info("Connected to MQTT Broker", "server", s.mqttBroker)
+
+			// 订阅反馈 Topic: iov/cmd-ack/+
+			// 假设 mqttTopicPrefix 是 "iov/cmd"，我们需要构造对应的 ack topic
+			// 这里简单起见，我们硬编码或约定 ack topic 为 "iov/cmd-ack/+"
+			statusTopic := "iov/cmd-ack/+"
+
+			if _, err := cm.Subscribe(context.Background(), &paho.Subscribe{
+				Subscriptions: []paho.SubscribeOptions{
+					{Topic: statusTopic, QoS: 1},
+				},
+			}); err != nil {
+				log.Error(err, "Failed to subscribe to status topic", "topic", statusTopic)
+			}
 		},
 		OnConnectError: func(err error) {
 			log.Error(err, "Failed to connect to MQTT Broker", "server", s.mqttBroker)
@@ -183,6 +200,9 @@ func (s *HubServer) initMQTTClient(ctx context.Context) error {
 				} else {
 					log.Info("Server requested disconnect", "reasonCode", d.ReasonCode)
 				}
+			},
+			OnPublishReceived: []func(paho.PublishReceived) (bool, error){
+				s.handleStatusReport,
 			},
 		},
 	}
@@ -212,7 +232,8 @@ func (s *HubServer) initK8sClient() error {
 
 	// Create a new scheme and add all our API types and standard types
 	cloupeerscheme := runtime.NewScheme()
-	_ = scheme.AddToScheme(cloupeerscheme) // Add standard schemes like v1.Pod, etc.
+	utilruntime.Must(scheme.AddToScheme(cloupeerscheme)) // Add standard schemes like v1.Pod, etc.
+	utilruntime.Must(iovv1alpha1.AddToScheme(cloupeerscheme))
 
 	k8sclient, err := controllerclient.New(k8sconfig, controllerclient.Options{Scheme: cloupeerscheme})
 	if err != nil {
@@ -221,4 +242,56 @@ func (s *HubServer) initK8sClient() error {
 	}
 	s.k8sclient = k8sclient
 	return nil
+}
+
+// handleStatusReport 处理 Agent 上报的状态
+func (s *HubServer) handleStatusReport(pr paho.PublishReceived) (bool, error) {
+	// 简单过滤：确保是我们关心的 Topic
+	// 实际生产中可以使用 paho 的 Router 进行更精准匹配
+	var statusMsg pb.AgentCommandStatus
+	if err := protojson.Unmarshal(pr.Packet.Payload, &statusMsg); err != nil {
+		log.Error(err, "Failed to unmarshal status report")
+		return true, nil // 格式错误不重试
+	}
+
+	log.Info("Received Status Report",
+		"commandName", statusMsg.CommandName,
+		"status", statusMsg.Status,
+		"msg", statusMsg.Message)
+
+	// 更新 K8s CRD
+	ctx := context.Background()
+
+	// 1. 构造 Patch 对象
+	// 我们只更新 Status 部分。CommandName 就是 CR Name。
+	cmd := &iovv1alpha1.VehicleCommand{}
+	cmd.Name = statusMsg.CommandName
+	cmd.Namespace = s.namespace // 假设所有 Command 都在 Hub 所在的 Namespace
+
+	// 2. 获取当前对象 (可选，为了更安全的 Patch，或者直接使用 MergePatch)
+	// 这里我们使用 MergeFrom 进行 Patch
+	patch := controllerclient.MergeFrom(cmd.DeepCopy())
+
+	// 3. 设置新状态
+	cmd.Status.Phase = iovv1alpha1.CommandPhase(statusMsg.Status)
+	cmd.Status.Message = statusMsg.Message
+	now := metav1.Now()
+	cmd.Status.LastUpdateTime = &now
+
+	// 根据状态设置特定的时间戳
+	if statusMsg.Status == string(iovv1alpha1.CommandPhaseReceived) {
+		cmd.Status.AcknowledgeTime = &now
+	} else if statusMsg.Status == string(iovv1alpha1.CommandPhaseSucceeded) ||
+		statusMsg.Status == string(iovv1alpha1.CommandPhaseFailed) {
+		cmd.Status.CompletionTime = &now
+	}
+
+	// 4. 执行 Patch
+	if err := s.k8sclient.Status().Patch(ctx, cmd, patch); err != nil {
+		log.Error(err, "Failed to patch VehicleCommand status", "name", cmd.Name)
+		return false, nil // 如果是 K8s 错误，也不要让 MQTT 重发了，避免阻塞
+	}
+
+	log.Info("Successfully patched VehicleCommand", "name", cmd.Name, "phase", statusMsg.Status)
+	return true, nil
 }

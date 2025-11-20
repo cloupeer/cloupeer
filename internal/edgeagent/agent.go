@@ -138,13 +138,48 @@ func (a *Agent) handleMessage(pr paho.PublishReceived) (bool, error) {
 
 	log.Info(">>> PROCESSING COMMAND <<<",
 		"Type", cmd.CommandType,
-		"ID", cmd.CommandId,
+		"ID", cmd.CommandName,
 		"Params", cmd.Parameters,
 		"Time", time.Unix(cmd.Timestamp, 0).Format(time.RFC3339))
 
 	// 这里是根据架构设计的后续步骤：
 	// 1. "触发一条消息提醒车主" -> Log / UI Event
 	// 2. "车主点击升级" -> 模拟等待或直接调用
+	//
+	// 模拟业务逻辑
+	// 1. 立即发送 ACK (Received)
+	a.publishStatus(cmd.CommandName, "Received", "Agent received command")
+
+	// 模拟业务处理 (Running)
+	go func() {
+		// 模拟耗时
+		time.Sleep(2 * time.Second)
+		a.publishStatus(cmd.CommandName, "Running", "Executing firmware update...")
+
+		time.Sleep(3 * time.Second)
+		// 模拟成功
+		a.publishStatus(cmd.CommandName, "Succeeded", "Firmware updated successfully")
+	}()
 
 	return true, nil
+}
+
+func (a *Agent) publishStatus(cmdName, status, msg string) {
+	topic := fmt.Sprintf("iov/cmd-ack/%s", a.vehicleID)
+
+	payload := &pb.AgentCommandStatus{
+		CommandName: cmdName,
+		Status:      status,
+		Message:     msg,
+	}
+
+	bytes, _ := protojson.Marshal(payload)
+
+	if _, err := a.mqttMgr.Publish(context.Background(), &paho.Publish{
+		Topic:   topic,
+		QoS:     1,
+		Payload: bytes,
+	}); err != nil {
+		log.Error(err, "Failed to publish status", "status", status)
+	}
 }

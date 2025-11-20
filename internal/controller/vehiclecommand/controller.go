@@ -92,6 +92,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		hubClient := pb.NewHubServiceClient(conn)
 
 		req := &pb.SendCommandRequest{
+			CommandName: cmd.Name,
 			VehicleId:   cmd.Spec.VehicleName,
 			CommandType: string(cmd.Spec.Command),
 			Parameters:  cmd.Spec.Parameters,
