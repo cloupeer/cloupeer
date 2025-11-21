@@ -20,6 +20,11 @@ type MqttOptions struct {
 	ConnectTimeout time.Duration `json:"connect-timeout" mapstructure:"connect-timeout"`
 	SessionExpiry  uint32        `json:"session-expiry" mapstructure:"session-expiry"`
 
+	// InsecureSkipVerify controls whether a client verifies the server's certificate chain and host name.
+	// If true, TLS accepts any certificate presented by the server and any host name in that certificate.
+	// In this mode, TLS is susceptible to man-in-the-middle attacks. This should be used only for testing.
+	InsecureSkipVerify bool `json:"insecure-skip-verify" mapstructure:"insecure-skip-verify"`
+
 	// Topic Topology definition
 	// Using prefixes allows us to construct topics like: {TopicRoot}/{XXX}
 	TopicRoot string `json:"topic-root" mapstructure:"topic-root"`
@@ -28,13 +33,14 @@ type MqttOptions struct {
 // NewMqttOptions creates a new MqttOptions with default values.
 func NewMqttOptions() *MqttOptions {
 	return &MqttOptions{
-		Broker:         "wss://mqtt.cloupeer.io/mqtt",
-		Username:       "admin",
-		Password:       "public",
-		KeepAlive:      60 * time.Second,
-		ConnectTimeout: 5 * time.Second,
-		SessionExpiry:  60,
-		TopicRoot:      "iov/v1",
+		Broker:             "wss://mqtt.cloupeer.io/mqtt",
+		Username:           "admin",
+		Password:           "public",
+		KeepAlive:          60 * time.Second,
+		ConnectTimeout:     5 * time.Second,
+		SessionExpiry:      60,
+		InsecureSkipVerify: true,
+		TopicRoot:          "iov/v1",
 	}
 }
 
@@ -59,6 +65,8 @@ func (o *MqttOptions) AddFlags(fs *pflag.FlagSet, prefixes ...string) {
 
 	fs.DurationVar(&o.KeepAlive, "mqtt.keep-alive", o.KeepAlive, "MQTT Keep Alive interval.")
 	fs.DurationVar(&o.ConnectTimeout, "mqtt.connect-timeout", o.ConnectTimeout, "Timeout for establishing MQTT connection.")
+	fs.Uint32Var(&o.SessionExpiry, "mqtt.session-expiry", o.SessionExpiry, "MQTT Session Expiry Interval in seconds.")
+	fs.BoolVar(&o.InsecureSkipVerify, "mqtt.insecure-skip-verify", o.InsecureSkipVerify, "If true, skips the TLS certificate verification.")
 
 	// Topics
 	fs.StringVar(&o.TopicRoot, "mqtt.topic-root", o.TopicRoot, "Topic prefix for sending commands.")
