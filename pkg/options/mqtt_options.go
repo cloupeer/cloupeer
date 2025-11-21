@@ -1,0 +1,65 @@
+package options
+
+import (
+	"time"
+
+	"github.com/spf13/pflag"
+)
+
+var _ IOptions = (*MqttOptions)(nil)
+
+// MqttOptions contains configuration for MQTT client and topics.
+type MqttOptions struct {
+	Broker   string `json:"broker" mapstructure:"broker"`
+	Username string `json:"username" mapstructure:"username"`
+	Password string `json:"password" mapstructure:"password"`
+	ClientID string `json:"client-id" mapstructure:"client-id"`
+
+	// Client behavior
+	KeepAlive      time.Duration `json:"keep-alive" mapstructure:"keep-alive"`
+	ConnectTimeout time.Duration `json:"connect-timeout" mapstructure:"connect-timeout"`
+	SessionExpiry  uint32        `json:"session-expiry" mapstructure:"session-expiry"`
+
+	// Topic Topology definition
+	// Using prefixes allows us to construct topics like: {TopicRoot}/{XXX}
+	TopicRoot string `json:"topic-root" mapstructure:"topic-root"`
+}
+
+// NewMqttOptions creates a new MqttOptions with default values.
+func NewMqttOptions() *MqttOptions {
+	return &MqttOptions{
+		Broker:         "wss://mqtt.cloupeer.io/mqtt",
+		Username:       "admin",
+		Password:       "public",
+		KeepAlive:      60 * time.Second,
+		ConnectTimeout: 5 * time.Second,
+		SessionExpiry:  60,
+		TopicRoot:      "iov/v1",
+	}
+}
+
+// Validate is used to parse and validate the parameters entered by the user at
+// the command line when the program starts.
+func (o *MqttOptions) Validate() []error {
+	if o == nil {
+		return nil
+	}
+
+	errors := []error{}
+
+	return errors
+}
+
+// AddFlags adds flags for MqttOptions to the specified FlagSet.
+func (o *MqttOptions) AddFlags(fs *pflag.FlagSet, prefixes ...string) {
+	fs.StringVar(&o.Broker, "mqtt.broker", o.Broker, "The URL of the MQTT broker.")
+	fs.StringVar(&o.Username, "mqtt.username", o.Username, "The username for MQTT authentication.")
+	fs.StringVar(&o.Password, "mqtt.password", o.Password, "The password for MQTT authentication.")
+	fs.StringVar(&o.ClientID, "mqtt.client-id", o.ClientID, "Explicit Client ID (optional, usually generated).")
+
+	fs.DurationVar(&o.KeepAlive, "mqtt.keep-alive", o.KeepAlive, "MQTT Keep Alive interval.")
+	fs.DurationVar(&o.ConnectTimeout, "mqtt.connect-timeout", o.ConnectTimeout, "Timeout for establishing MQTT connection.")
+
+	// Topics
+	fs.StringVar(&o.TopicRoot, "mqtt.topic-root", o.TopicRoot, "Topic prefix for sending commands.")
+}
