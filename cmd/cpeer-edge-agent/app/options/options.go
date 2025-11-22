@@ -20,7 +20,6 @@ var _ app.NamedFlagSetOptions = (*AgentOptions)(nil)
 
 func NewAgentOptions() *AgentOptions {
 	o := &AgentOptions{
-		VehicleID:   "vh-001",
 		MqttOptions: options.NewMqttOptions(),
 		Log:         log.NewOptions(),
 	}
@@ -51,6 +50,10 @@ func (o *AgentOptions) Validate() error {
 }
 
 func (o *AgentOptions) Config() (*edgeagent.Config, error) {
+	if o.VehicleID == "" {
+		o.VehicleID = edgeagent.DiscoverVehicleID()
+	}
+
 	return &edgeagent.Config{
 		VehicleID:   o.VehicleID,
 		MqttOptions: o.MqttOptions,
