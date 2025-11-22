@@ -55,8 +55,9 @@ func (c *pahoClient) Start(ctx context.Context) error {
 		ServerUrls:                    []*url.URL{brokerURL},
 		KeepAlive:                     c.cfg.KeepAlive,
 		CleanStartOnInitialConnection: c.cfg.CleanStart,
-		SessionExpiryInterval:         60, // Defaulting to 60s
+		SessionExpiryInterval:         c.cfg.SessionExpiry,
 		ReconnectBackoff:              autopaho.NewConstantBackoff(3 * time.Second),
+		ConnectTimeout:                c.cfg.ConnectTimeout,
 		ConnectUsername:               c.cfg.Username,
 		ConnectPassword:               []byte(c.cfg.Password),
 		TlsCfg: &tls.Config{

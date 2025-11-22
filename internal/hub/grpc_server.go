@@ -3,19 +3,44 @@ package hub
 import (
 	"context"
 	"fmt"
+	"net"
 	"time"
 
-	"github.com/eclipse/paho.golang/paho"
+	"google.golang.org/grpc"
 	"google.golang.org/protobuf/encoding/protojson"
 
 	pb "cloupeer.io/cloupeer/api/proto/v1"
 	"cloupeer.io/cloupeer/pkg/log"
+	"cloupeer.io/cloupeer/pkg/mqtt"
+	mqtttopic "cloupeer.io/cloupeer/pkg/mqtt/topic"
 )
+
+type GrpcServer struct {
+	srv *grpc.Server
+	lis net.Listener
+}
+
+func (cfg *Config) NewGrpcServer(mqttClient mqtt.Client, topicBuilder *mqtttopic.TopicBuilder) (*GrpcServer, error) {
+	lis, err := net.Listen("tcp", cfg.GrpcOptions.Addr)
+	if err != nil {
+		return nil, fmt.Errorf("failed to listen on grpc addr %s: %w", cfg.GrpcOptions.Addr, err)
+	}
+
+	grpcServer := grpc.NewServer()
+	pb.RegisterHubServiceServer(grpcServer, &grpcHandler{
+		mqttclient:   mqttClient,
+		topicbuilder: topicBuilder,
+	})
+
+	return &GrpcServer{srv: grpcServer, lis: lis}, nil
+}
 
 // grpcHandler implements pb.HubServiceServer
 type grpcHandler struct {
 	pb.UnimplementedHubServiceServer
-	parent *HubServer
+
+	mqttclient   mqtt.Client
+	topicbuilder *mqtttopic.TopicBuilder
 }
 
 // SendCommand implements the gRPC method defined in hub.proto
@@ -25,8 +50,8 @@ func (h *grpcHandler) SendCommand(ctx context.Context, req *pb.SendCommandReques
 		"type", req.CommandType,
 		"params", req.Parameters)
 
-	// 1. 构造 Topic: iov/cmd/{vehicleID}
-	topic := fmt.Sprintf("%s/%s", h.parent.mqttTopicPrefix, req.VehicleId)
+	// 1. 构造 Topic
+	topic := h.topicbuilder.Command(req.VehicleId)
 
 	// 2. 构造 Payload (使用生成的 PB 结构体)
 	pbPayload := &pb.AgentCommand{
@@ -50,12 +75,7 @@ func (h *grpcHandler) SendCommand(ctx context.Context, req *pb.SendCommandReques
 
 	// 3. 发布 MQTT 消息
 	// 使用 QoS 1 (At Least Once) 确保送达
-	_, err = h.parent.mqttMgr.Publish(ctx, &paho.Publish{
-		Topic:   topic,
-		QoS:     1,
-		Payload: payloadBytes,
-	})
-
+	err = h.mqttclient.Publish(ctx, topic, 1, false, payloadBytes)
 	if err != nil {
 		log.Error(err, "Failed to publish MQTT message", "topic", topic)
 		return &pb.SendCommandResponse{

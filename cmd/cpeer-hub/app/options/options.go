@@ -7,31 +7,26 @@ import (
 	"cloupeer.io/cloupeer/internal/hub"
 	"cloupeer.io/cloupeer/pkg/app"
 	"cloupeer.io/cloupeer/pkg/log"
+	"cloupeer.io/cloupeer/pkg/options"
 )
 
 type HubOptions struct {
-	Namespace       string
-	HttpAddr        string
-	GrpcAddr        string
-	MqttBroker      string
-	MqttUsername    string
-	MqttPassword    string
-	MqttTopicPrefix string
-	Log             *log.Options
+	KubeOptions *options.KubeOptions `json:"kube" mapstructure:"kube"`
+	HttpOptions *options.HttpOptions `json:"http" mapstructure:"http"`
+	GrpcOptions *options.GrpcOptions `json:"grpc" mapstructure:"grpc"`
+	MqttOptions *options.MqttOptions `json:"mqtt" mapstructure:"mqtt"`
+	Log         *log.Options
 }
 
 var _ app.NamedFlagSetOptions = (*HubOptions)(nil)
 
 func NewHubOptions() *HubOptions {
 	o := &HubOptions{
-		Namespace:       "cloupeer-system",
-		HttpAddr:        ":8080",
-		GrpcAddr:        ":8081",
-		MqttBroker:      "tcp://emqx.cloupeer-system.svc:1883",
-		MqttUsername:    "admin",
-		MqttPassword:    "public",
-		MqttTopicPrefix: "iov/cmd",
-		Log:             log.NewOptions(),
+		KubeOptions: options.NewKubeOptions(),
+		HttpOptions: options.NewHttpOptions(),
+		GrpcOptions: options.NewGrpcOptions(),
+		MqttOptions: options.NewMqttOptions(),
+		Log:         log.NewOptions(),
 	}
 
 	return o
@@ -39,20 +34,11 @@ func NewHubOptions() *HubOptions {
 
 func (o *HubOptions) Flags() cliflag.NamedFlagSets {
 	fss := cliflag.NamedFlagSets{}
-
-	// Add flags for Hub specific options
-	fs := fss.FlagSet("Hub")
-	fs.StringVar(&o.Namespace, "namespace", o.Namespace, "The Kubernetes namespace to watch for Cloupeer resources.")
-	fs.StringVar(&o.HttpAddr, "http-addr", o.HttpAddr, "The address the cpeer-hub HTTP server should listen on.")
-	fs.StringVar(&o.GrpcAddr, "grpc-addr", o.GrpcAddr, "The address the cpeer-hub gRPC server should listen on.")
-
-	fs.StringVar(&o.MqttBroker, "mqtt-broker", o.MqttBroker, "The URL of the MQTT broker (e.g., tcp://emqx:1883).")
-	fs.StringVar(&o.MqttUsername, "mqtt-username", o.MqttUsername, "The username for MQTT authentication.")
-	fs.StringVar(&o.MqttPassword, "mqtt-password", o.MqttPassword, "The password for MQTT authentication.")
-	fs.StringVar(&o.MqttTopicPrefix, "mqtt-topic-prefix", o.MqttTopicPrefix, "The topic prefix for command publishing.")
-
-	// Add flags for logging
-	o.Log.AddFlags(fss.FlagSet("Log"))
+	o.KubeOptions.AddFlags(fss.FlagSet("kube"))
+	o.HttpOptions.AddFlags(fss.FlagSet("http"))
+	o.GrpcOptions.AddFlags(fss.FlagSet("grpc"))
+	o.MqttOptions.AddFlags(fss.FlagSet("mqtt"))
+	o.Log.AddFlags(fss.FlagSet("log"))
 	return fss
 }
 
@@ -62,18 +48,19 @@ func (o *HubOptions) Complete() error {
 
 func (o *HubOptions) Validate() error {
 	errs := []error{}
+	errs = append(errs, o.KubeOptions.Validate()...)
+	errs = append(errs, o.HttpOptions.Validate()...)
+	errs = append(errs, o.GrpcOptions.Validate()...)
+	errs = append(errs, o.MqttOptions.Validate()...)
 	errs = append(errs, o.Log.Validate()...)
 	return utilerrors.NewAggregate(errs)
 }
 
 func (o *HubOptions) Config() (*hub.Config, error) {
 	return &hub.Config{
-		Namespace:       o.Namespace,
-		HttpAddr:        o.HttpAddr,
-		GrpcAddr:        o.GrpcAddr,
-		MqttBroker:      o.MqttBroker,
-		MqttUsername:    o.MqttUsername,
-		MqttPassword:    o.MqttPassword,
-		MqttTopicPrefix: o.MqttTopicPrefix,
+		KubeOptions: o.KubeOptions,
+		HttpOptions: o.HttpOptions,
+		GrpcOptions: o.GrpcOptions,
+		MqttOptions: o.MqttOptions,
 	}, nil
 }

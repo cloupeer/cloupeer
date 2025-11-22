@@ -16,6 +16,9 @@ type ClientConfig struct {
 	// KeepAlive in seconds. Default is 60.
 	KeepAlive uint16
 
+	// SessionExpiry in seconds. Default is 60.
+	SessionExpiry uint32
+
 	// ConnectTimeout for the initial connection. Default is 5s.
 	ConnectTimeout time.Duration
 
@@ -30,12 +33,16 @@ type ClientConfig struct {
 
 // setDefaultConfig applies safe default values to the configuration.
 func setDefaultConfig(cfg *ClientConfig) {
-	if cfg.ConnectTimeout == 0 {
-		cfg.ConnectTimeout = 5 * time.Second
-	}
-
 	if cfg.KeepAlive == 0 {
 		cfg.KeepAlive = 60
+	}
+
+	if cfg.SessionExpiry == 0 {
+		cfg.SessionExpiry = 60
+	}
+
+	if cfg.ConnectTimeout == 0 {
+		cfg.ConnectTimeout = 5 * time.Second
 	}
 }
 

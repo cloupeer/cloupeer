@@ -3,6 +3,7 @@ package options
 import (
 	"time"
 
+	"cloupeer.io/cloupeer/pkg/mqtt"
 	"github.com/spf13/pflag"
 )
 
@@ -19,6 +20,7 @@ type MqttOptions struct {
 	KeepAlive      time.Duration `json:"keep-alive" mapstructure:"keep-alive"`
 	ConnectTimeout time.Duration `json:"connect-timeout" mapstructure:"connect-timeout"`
 	SessionExpiry  uint32        `json:"session-expiry" mapstructure:"session-expiry"`
+	CleanStart     bool          `json:"clean-start" mapstructure:"clean-start"`
 
 	// InsecureSkipVerify controls whether a client verifies the server's certificate chain and host name.
 	// If true, TLS accepts any certificate presented by the server and any host name in that certificate.
@@ -39,6 +41,7 @@ func NewMqttOptions() *MqttOptions {
 		KeepAlive:          60 * time.Second,
 		ConnectTimeout:     5 * time.Second,
 		SessionExpiry:      60,
+		CleanStart:         true,
 		InsecureSkipVerify: true,
 		TopicRoot:          "iov/v1",
 	}
@@ -70,4 +73,18 @@ func (o *MqttOptions) AddFlags(fs *pflag.FlagSet, prefixes ...string) {
 
 	// Topics
 	fs.StringVar(&o.TopicRoot, "mqtt.topic-root", o.TopicRoot, "Topic prefix for sending commands.")
+}
+
+func (o *MqttOptions) ToClientConfig() *mqtt.ClientConfig {
+	return &mqtt.ClientConfig{
+		BrokerURL:          o.Broker,
+		Username:           o.Username,
+		Password:           o.Password,
+		ClientID:           o.ClientID,
+		KeepAlive:          uint16(o.KeepAlive.Seconds()),
+		SessionExpiry:      o.SessionExpiry,
+		ConnectTimeout:     o.ConnectTimeout,
+		CleanStart:         o.CleanStart,
+		InsecureSkipVerify: o.InsecureSkipVerify,
+	}
 }
