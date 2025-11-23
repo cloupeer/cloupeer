@@ -18,7 +18,7 @@ func NewControllerManagerOptions() *ControllerManagerOptions {
 	return &ControllerManagerOptions{
 		ConcurrentReconciles:   5,
 		HealthProbeBindAddress: ":9001",
-		HubAddr:                "cpeer-hub.cloupeer-system.svc:9091",
+		HubAddr:                "cpeer-hub.cloupeer-system.svc:8001",
 		LogOptions:             log.NewOptions(),
 	}
 }
