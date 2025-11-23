@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
@@ -54,20 +53,13 @@ func (s *SenderReconciler) Reconcile(ctx context.Context, cmd *iovv1alpha1.Vehic
 	// 4. Handle Hub Rejection
 	if !resp.Accepted {
 		logger.Info("Hub rejected the command", "reason", resp.Message)
-		cmd.Status.Phase = iovv1alpha1.CommandPhaseFailed
-		cmd.Status.Message = fmt.Sprintf("Hub rejected: %s", resp.Message)
-		// We don't set specific timestamps here as Failed is a terminal state,
-		// but CompletionTime could be set if desired.
+		MarkFailed(cmd, fmt.Sprintf("Hub rejected: %s", resp.Message))
 		return ctrl.Result{}, nil
 	}
 
 	// 5. Handle Success
 	logger.Info("Command successfully sent to Hub", "hubMessage", resp.Message)
-
-	now := metav1.Now()
-	cmd.Status.Phase = iovv1alpha1.CommandPhaseSent
-	cmd.Status.Message = "Command successfully forwarded to Hub"
-	cmd.Status.LastUpdateTime = &now
+	MarkSent(cmd, "Command successfully forwarded to Hub")
 
 	// This is strictly "Sent", not yet "Acknowledged" by the vehicle agent.
 	// The Hub/Agent async flow will update it to 'Received' later.
