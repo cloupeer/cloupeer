@@ -41,6 +41,8 @@ func SetCondition(v *iovv1alpha1.Vehicle, conditionType string, status metav1.Co
 		ObservedGeneration: v.Generation,
 		LastTransitionTime: metav1.Now(),
 	})
+
+	v.Status.Message = message
 }
 
 func FindLatestCondition(conditions []metav1.Condition) *metav1.Condition {

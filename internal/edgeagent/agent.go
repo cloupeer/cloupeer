@@ -94,6 +94,7 @@ func (a *Agent) handleMessage(ctx context.Context, topic string, payload []byte)
 		// 这是一个 URL 响应
 		a.reqMu.Lock()
 		if ch, ok := a.pendingRequests[resp.RequestId]; ok {
+			time.Sleep(10 * time.Second)
 			ch <- resp.DownloadUrl
 			delete(a.pendingRequests, resp.RequestId) // 清理
 		}
@@ -155,10 +156,8 @@ func (a *Agent) executeOTAProcess(cmd *pb.AgentCommand) {
 	a.mqttclient.Publish(context.Background(), topic, 1, false, reqBytes)
 
 	// 3. 等待响应 (带超时)
-	var downloadURL string
 	select {
 	case url := <-respChan:
-		downloadURL = url
 		log.Info("Received Firmware URL", "url", url)
 	case <-time.After(5 * time.Second):
 		log.Error(nil, "Timeout waiting for firmware URL")
@@ -172,7 +171,7 @@ func (a *Agent) executeOTAProcess(cmd *pb.AgentCommand) {
 	}
 
 	// 4. 开始下载 (Running)
-	a.publishStatus(cmd.CommandName, "Running", fmt.Sprintf("Downloading from %s...", downloadURL))
+	a.publishStatus(cmd.CommandName, "Running", "Downloading firmware artifact...")
 	time.Sleep(3 * time.Second) // 模拟下载
 
 	// 5. 完成

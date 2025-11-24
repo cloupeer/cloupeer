@@ -14,7 +14,32 @@ spec:
     singular: vehicle
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - description: Vehicle OTA Phase
+      jsonPath: .status.phase
+      name: Phase
+      type: string
+    - description: Desired firmware version
+      jsonPath: .spec.firmwareVersion
+      name: Desired
+      type: string
+    - description: Reported firmware version
+      jsonPath: .status.reportedFirmwareVersion
+      name: Reported
+      type: string
+    - description: Retry count
+      jsonPath: .status.retryCount
+      name: Retry
+      type: integer
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    - description: Real-time status message
+      jsonPath: .status.message
+      name: Message
+      priority: 1
+      type: string
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: Vehicle is the Schema for the vehicles API
@@ -109,12 +134,12 @@ spec:
                   - type
                   type: object
                 type: array
-              errorMessage:
-                description: Any error message during the OTA process.
-                type: string
               lastSeenTime:
                 description: The last time the vehicle was seen by the control plane.
                 format: date-time
+                type: string
+              message:
+                description: Any message during the OTA process.
                 type: string
               phase:
                 description: The last reported phase of the vehicle's OTA status.

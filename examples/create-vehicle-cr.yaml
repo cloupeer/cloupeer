@@ -5,4 +5,4 @@ metadata:
   namespace: cloupeer-system # 因为 scope 是 Namespaced，所以最好明确指定
 spec:
   description: "A vehicle for test"
-  firmwareVersion: v1.7.0
+  firmwareVersion: v1.9.2

@@ -83,7 +83,6 @@ func (f *FiniteStateMachine) ActionEnterPending(ctx context.Context, e *fsm.Even
 
 	// Reset status fields (Conditions, ErrorMessage) to prepare for a new update cycle.
 	v.Status.Conditions = []metav1.Condition{}
-	v.Status.ErrorMessage = ""
 	SetCondition(v, iovv1alpha1.ConditionTypeReady, metav1.ConditionFalse, "Pending", "Update process started")
 	return nil
 }
@@ -92,8 +91,9 @@ func (f *FiniteStateMachine) ActionEnterPending(ctx context.Context, e *fsm.Even
 func (f *FiniteStateMachine) ActionEnterSucceeded(ctx context.Context, e *fsm.Event) error {
 	v := e.Args[0].(*iovv1alpha1.Vehicle)
 
-	v.Status.ErrorMessage = ""
-	SetCondition(v, iovv1alpha1.ConditionTypeReady, metav1.ConditionTrue, "Succeeded", "Firmware update applied")
+	v.Status.ReportedFirmwareVersion = v.Spec.FirmwareVersion
+	SetCondition(v, iovv1alpha1.ConditionTypeReady, metav1.ConditionTrue, "Succeeded", "Firmware update applied successfully")
+	SetCondition(v, iovv1alpha1.ConditionTypeSynced, metav1.ConditionTrue, "Synced", fmt.Sprintf("Version %s is active", v.Spec.FirmwareVersion))
 	return nil
 }
 
@@ -109,15 +109,15 @@ func (f *FiniteStateMachine) ActionEnterFailed(ctx context.Context, e *fsm.Event
 		}
 	}
 	// We embed the spec version in the error message for the Reconcile loop's retry logic.
-	v.Status.ErrorMessage = fmt.Sprintf("failed on version %s: %s", v.Spec.FirmwareVersion, errMsg)
-	SetCondition(v, iovv1alpha1.ConditionTypeReady, metav1.ConditionFalse, "Failed", errMsg)
+	msg := fmt.Sprintf("Failed on version %s: %s", v.Spec.FirmwareVersion, errMsg)
+	SetCondition(v, iovv1alpha1.ConditionTypeReady, metav1.ConditionFalse, "Failed", msg)
+	SetCondition(v, iovv1alpha1.ConditionTypeSynced, metav1.ConditionFalse, "SyncFailed", msg)
 	return nil
 }
 
 // ActionEnterIdle is a "Side-Effect" callback.
 func (f *FiniteStateMachine) ActionEnterIdle(ctx context.Context, e *fsm.Event) error {
 	v := e.Args[0].(*iovv1alpha1.Vehicle)
-	v.Status.ErrorMessage = ""
-	SetCondition(v, iovv1alpha1.ConditionTypeReady, metav1.ConditionTrue, "Idle", "Vehicle is idle")
+	SetCondition(v, iovv1alpha1.ConditionTypeReady, metav1.ConditionTrue, "Idle", "Vehicle is ready for new commands")
 	return nil
 }

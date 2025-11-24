@@ -47,13 +47,13 @@ type VehicleStatus struct {
 	// +optional
 	ReportedFirmwareVersion string `json:"reportedFirmwareVersion,omitempty"`
 
-	// Any error message during the OTA process.
+	// Any message during the OTA process.
 	// +optional
-	ErrorMessage string `json:"errorMessage,omitempty"`
+	Message string `json:"message,omitempty"`
 
 	// RetryCount tracks the number of automated retries for the current update.
 	// +optional
-	RetryCount int32 `json:"retryCount,omitempty"`
+	RetryCount int32 `json:"retryCount"`
 
 	// The last time the vehicle was seen by the control plane.
 	// +optional
@@ -66,22 +66,27 @@ type VehicleStatus struct {
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
 }
 
-// --- 定义 Condition Types ---
+// Condition Types
 const (
-	// ConditionTypeReady 表示车辆是否准备好接收新指令（即处于 Idle）
+	// ConditionTypeReady indicates whether the vehicle is ready to accept new commands.
+	//   True: The vehicle is idle, healthy, and ready for operations.
+	//   False: The vehicle is currently processing a command (busy) or is in a failed state.
 	ConditionTypeReady = "Ready"
-	// ConditionTypeDownloaded 表示固件是否已下载
-	ConditionTypeDownloaded = "Downloaded"
-	// ConditionTypeInstalled 表示固件是否已安装
-	ConditionTypeInstalled = "Installed"
-	// ConditionTypeRebooted 表示车辆是否已重启
-	ConditionTypeRebooted = "Rebooted"
-	// ConditionTypeFailed 表示OTA升级失败
-	ConditionTypeFailed = "Failed"
+
+	// ConditionTypeSynced indicates whether the observed state matches the desired state.
+	//   True: The vehicle's reported firmware version matches the Spec (system is consistent).
+	//   False: The vehicle is currently updating or pending an update (Spec and Status are diverged).
+	ConditionTypeSynced = "Synced"
 )
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+//+kubebuilder:printcolumn:name="Phase",type="string",JSONPath=".status.phase",description="Vehicle OTA Phase"
+//+kubebuilder:printcolumn:name="Desired",type="string",JSONPath=".spec.firmwareVersion",description="Desired firmware version"
+//+kubebuilder:printcolumn:name="Reported",type="string",JSONPath=".status.reportedFirmwareVersion",description="Reported firmware version"
+//+kubebuilder:printcolumn:name="Retry",type="integer",JSONPath=".status.retryCount",description="Retry count"
+//+kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
+//+kubebuilder:printcolumn:name="Message",type="string",JSONPath=".status.message",description="Real-time status message",priority=1
 
 // Vehicle is the Schema for the vehicles API
 type Vehicle struct {

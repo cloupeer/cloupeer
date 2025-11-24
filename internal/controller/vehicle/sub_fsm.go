@@ -2,23 +2,30 @@ package vehicle
 
 import (
 	"context"
+	"fmt"
 	"math"
+	"strings"
 	"time"
 
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	iovv1alpha1 "cloupeer.io/cloupeer/pkg/apis/iov/v1alpha1"
 )
 
 // SubStateMachine 实现了 SubReconciler 接口
-type SubStateMachine struct{}
+type SubStateMachine struct {
+	client.Client
+}
 
 // NewStateMachine 创建一个新的 state machine sub-reconciler.
-func NewSubStateMachine() SubReconciler {
-	return &SubStateMachine{}
+func NewSubStateMachine(cli client.Client) SubReconciler {
+	return &SubStateMachine{Client: cli}
 }
 
 // Reconcile 实现了 SubReconciler 接口
@@ -44,22 +51,7 @@ func (s *SubStateMachine) Reconcile(ctx context.Context, v *iovv1alpha1.Vehicle)
 		err = f.Event(ctx, EventUpdate, v)
 
 	case iovv1alpha1.VehiclePhasePending:
-		otaRequired := true
-		if cond := FindLatestCondition(v.Status.Conditions); cond != nil {
-			switch cond.Type {
-			case iovv1alpha1.ConditionTypeRebooted:
-				err = f.Event(ctx, EventSuccess, v)
-				otaRequired = false
-			case iovv1alpha1.ConditionTypeFailed:
-				err = f.Event(ctx, EventFail, v)
-				otaRequired = false
-			}
-		}
-
-		if otaRequired {
-			// 模拟 OTA: 下载、安装、重启
-			return SimulateOTA(v)
-		}
+		err = s.handlePendingPhase(ctx, f, v)
 
 	case iovv1alpha1.VehiclePhaseSucceeded:
 		// (Active) Finalize the successful update.
@@ -69,14 +61,14 @@ func (s *SubStateMachine) Reconcile(ctx context.Context, v *iovv1alpha1.Vehicle)
 		// (Active) Handle automated retry logic
 		logger.Info("Entering 'Failed' state handler.", "currentAttempt", v.Status.RetryCount)
 
-		lastFailedCond := meta.FindStatusCondition(v.Status.Conditions, iovv1alpha1.ConditionTypeFailed)
-		if lastFailedCond == nil {
+		failedCond := meta.FindStatusCondition(v.Status.Conditions, iovv1alpha1.ConditionTypeSynced)
+		if failedCond == nil || failedCond.Status == metav1.ConditionTrue {
 			// Safeguard
 			return ctrl.Result{}, nil
 		}
 
 		// 1. Check for manual intervention (new firmware version)
-		if lastFailedCond.ObservedGeneration < v.Generation {
+		if failedCond.ObservedGeneration < v.Generation {
 			if !isNewVersion(v) {
 				// --- User wants to CANCEL ---
 				// e.g., Spec changed from v2.0.0 (Failed) -> v1.0.0 (Reported)
@@ -107,7 +99,7 @@ func (s *SubStateMachine) Reconcile(ctx context.Context, v *iovv1alpha1.Vehicle)
 		// 3rd retry (RetryCount=2): 2^2 * 1m = 4m
 		backoffDuration := time.Duration(math.Pow(2, float64(v.Status.RetryCount))) * baseDelay
 
-		elapsed := time.Since(lastFailedCond.LastTransitionTime.Time)
+		elapsed := time.Since(failedCond.LastTransitionTime.Time)
 		if elapsed < backoffDuration {
 			requeueAfter := backoffDuration - elapsed
 			logger.Info("Waiting for exponential backoff before next retry", "nextAttempt", v.Status.RetryCount+1, "requeueAfter", requeueAfter)
@@ -118,11 +110,8 @@ func (s *SubStateMachine) Reconcile(ctx context.Context, v *iovv1alpha1.Vehicle)
 		logger.Info("Backoff complete. Triggering retry.", "nextAttempt", v.Status.RetryCount+1)
 		err = f.Event(ctx, EventRetry, v) // Trigger EventRetry (Failed -> Pending)
 
-	// Default: Do nothing for Downloading, Installing, Rebooting.
-	// Their 'enter_' callbacks handle the logic, preventing Reconcile
-	// from interfering.
 	default:
-		// ...
+		// Default: Do nothing.
 	}
 
 	// Handle FSM transition errors (e.g., CanceledError)
@@ -137,4 +126,55 @@ func (s *SubStateMachine) Reconcile(ctx context.Context, v *iovv1alpha1.Vehicle)
 	// Return empty result. If the status changed, the main controller's
 	// Patch() will trigger the next Reconcile.
 	return ctrl.Result{}, nil
+}
+
+func (s *SubStateMachine) handlePendingPhase(ctx context.Context, f *FiniteStateMachine, v *iovv1alpha1.Vehicle) error {
+	logger := log.FromContext(ctx)
+
+	// TODO: FirmwareVersion 可能包含 K8s 资源名称不允许的字符，需要对版本号进行 Slugify 处理或使用 Hash
+	safeVersion := strings.ReplaceAll(v.Spec.FirmwareVersion, "+", "-")
+	cmdName := fmt.Sprintf("ota-%s-%s-%d", v.Name, safeVersion, v.Status.RetryCount)
+
+	var cmd iovv1alpha1.VehicleCommand
+	if err := s.Get(ctx, types.NamespacedName{Namespace: v.Namespace, Name: cmdName}, &cmd); err != nil {
+		if !errors.IsNotFound(err) {
+			return err
+		}
+
+		cmd = iovv1alpha1.VehicleCommand{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      cmdName,
+				Namespace: v.Namespace,
+				OwnerReferences: []metav1.OwnerReference{
+					*metav1.NewControllerRef(v, iovv1alpha1.GroupVersion.WithKind("Vehicle")),
+				},
+			},
+			Spec: iovv1alpha1.VehicleCommandSpec{
+				VehicleName: v.Name,
+				Command:     iovv1alpha1.CommandTypeOTA,
+				Parameters: map[string]string{
+					"version": v.Spec.FirmwareVersion,
+				},
+			},
+		}
+
+		logger.Info("Creating new OTA Command", "command", cmdName, "targetVersion", v.Spec.FirmwareVersion)
+		SetCondition(v, iovv1alpha1.ConditionTypeSynced, metav1.ConditionFalse, "Updating", "Creating new OTA Command")
+		return s.Create(ctx, &cmd)
+	}
+
+	switch cmd.Status.Phase {
+
+	case iovv1alpha1.CommandPhaseSucceeded:
+		return f.Event(ctx, EventSuccess, v)
+
+	case iovv1alpha1.CommandPhaseFailed:
+		return f.Event(ctx, EventFail, v, cmd.Status.Message)
+
+	default:
+		msg := fmt.Sprintf("Waiting for OTA command. Phase: %s, Message: %s", cmd.Status.Phase, cmd.Status.Message)
+		SetCondition(v, iovv1alpha1.ConditionTypeSynced, metav1.ConditionFalse, "Updating", msg)
+	}
+
+	return nil
 }

@@ -16,7 +16,7 @@ import (
 	iovv1alpha1 "cloupeer.io/cloupeer/pkg/apis/iov/v1alpha1"
 )
 
-type VehicleReconciler struct {
+type Reconciler struct {
 	client.Client
 	Scheme   *runtime.Scheme
 	Recorder record.EventRecorder
@@ -26,12 +26,12 @@ type VehicleReconciler struct {
 	subReconcilers []SubReconciler
 }
 
-// NewReconciler creates a new VehicleReconciler.
+// NewReconciler creates a new vehicle Reconciler.
 // This constructor follows the "encapsulated" pattern (vs. dependency injection)
 // by instantiating its own sub-reconciler chain. This simplifies
 // the registration in manager.go.
-func NewReconciler(cli client.Client, sche *runtime.Scheme, recorder record.EventRecorder) *VehicleReconciler {
-	r := &VehicleReconciler{
+func NewReconciler(cli client.Client, sche *runtime.Scheme, recorder record.EventRecorder) *Reconciler {
+	r := &Reconciler{
 		Client:   cli,
 		Scheme:   sche,
 		Recorder: recorder,
@@ -41,7 +41,7 @@ func NewReconciler(cli client.Client, sche *runtime.Scheme, recorder record.Even
 	// We can add more sub-reconcilers here (e.g., NewConfigReconciler())
 	// and they will be executed in order.
 	r.subReconcilers = []SubReconciler{
-		NewSubStateMachine(),
+		NewSubStateMachine(cli),
 	}
 
 	return r
@@ -60,7 +60,7 @@ func NewReconciler(cli client.Client, sche *runtime.Scheme, recorder record.Even
 // This simulation implements an instantaneous state machine, where each state
 // transition occurs immediately in the subsequent reconcile loop, driven by
 // the Status.Patch() event.
-func (r *VehicleReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	// Get the logger from the context, which is the standard
 	// controller-runtime practice.
 	logger := log.FromContext(ctx)
@@ -90,6 +90,11 @@ func (r *VehicleReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	// client.MergeFrom() will calculate the "diff" between originalVehicle
 	// and the modified 'vehicle' object.
 	originalVehicle := vehicle.DeepCopy()
+
+	// 【Hack】Force patch generation for RetryCount=0.
+	if originalVehicle.Status.RetryCount == 0 {
+		originalVehicle.Status.RetryCount = -1
+	}
 
 	// Handle Finalizer logic
 	if !vehicle.ObjectMeta.DeletionTimestamp.IsZero() {
@@ -160,7 +165,7 @@ func (r *VehicleReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	return aggregatedResult, nil
 }
 
-func (r *VehicleReconciler) handleVehicleDeletion(ctx context.Context, logger logr.Logger, vehicle, originalVehicle *iovv1alpha1.Vehicle) (ctrl.Result, error) {
+func (r *Reconciler) handleVehicleDeletion(ctx context.Context, logger logr.Logger, vehicle, originalVehicle *iovv1alpha1.Vehicle) (ctrl.Result, error) {
 	// --- The object is being deleted ---
 	if controllerutil.ContainsFinalizer(vehicle, iovv1alpha1.VehicleFinalizer) {
 		logger.Info("Handling Finalizer: Deletion detected, running cleanup logic...")
@@ -192,7 +197,7 @@ func (r *VehicleReconciler) handleVehicleDeletion(ctx context.Context, logger lo
 	return ctrl.Result{}, nil
 }
 
-func (r *VehicleReconciler) addFinalizer(ctx context.Context, logger logr.Logger, vehicle, originalVehicle *iovv1alpha1.Vehicle) (ctrl.Result, error) {
+func (r *Reconciler) addFinalizer(ctx context.Context, logger logr.Logger, vehicle, originalVehicle *iovv1alpha1.Vehicle) (ctrl.Result, error) {
 	logger.Info("Adding Finalizer to new/updated Vehicle.")
 	controllerutil.AddFinalizer(vehicle, iovv1alpha1.VehicleFinalizer)
 
@@ -210,7 +215,7 @@ func (r *VehicleReconciler) addFinalizer(ctx context.Context, logger logr.Logger
 
 // clearVehicle contains the business logic required to clean up
 // before a Vehicle resource is deleted.
-func (r *VehicleReconciler) clearVehicle(ctx context.Context, v *iovv1alpha1.Vehicle) error {
+func (r *Reconciler) clearVehicle(ctx context.Context, v *iovv1alpha1.Vehicle) error {
 	logger := log.FromContext(ctx)
 
 	// --- Simulate cleanup logic ---
@@ -232,8 +237,9 @@ func (r *VehicleReconciler) clearVehicle(ctx context.Context, v *iovv1alpha1.Veh
 	return nil
 }
 
-func (r *VehicleReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
+func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&iovv1alpha1.Vehicle{}).
+		Owns(&iovv1alpha1.VehicleCommand{}).
 		Complete(r)
 }
