@@ -29,10 +29,10 @@ type Controller interface {
 	SetupWithManager(ctx context.Context, mgr ctrl.Manager) error
 }
 
-func NewControllerManager(ctx context.Context, kubeconfig *rest.Config, healthProbe string, hubAddr string) (manager.Manager, error) {
+func NewControllerManager(ctx context.Context, kubeconfig *rest.Config, healthProbe string, metricsAddr string, hubAddr string) (manager.Manager, error) {
 	mgr, err := ctrl.NewManager(kubeconfig, ctrl.Options{
 		Scheme:                 cloupeerScheme,
-		Metrics:                server.Options{BindAddress: "0"},
+		Metrics:                server.Options{BindAddress: metricsAddr},
 		HealthProbeBindAddress: healthProbe,
 	})
 	if err != nil {

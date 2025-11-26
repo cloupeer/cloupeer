@@ -33,7 +33,7 @@ func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 			}
 
 			kubeconfig := controllerruntime.GetConfigOrDie()
-			mgr, err := controller.NewControllerManager(ctx, kubeconfig, opts.HealthProbeBindAddress, opts.HubAddr)
+			mgr, err := controller.NewControllerManager(ctx, kubeconfig, opts.HealthProbeBindAddress, opts.MetricsBindAddress, opts.HubAddr)
 			if err != nil {
 				log.Error(err, "failed to new controller manager")
 				return err

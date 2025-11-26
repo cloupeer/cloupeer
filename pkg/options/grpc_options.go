@@ -24,7 +24,7 @@ type GrpcOptions struct {
 func NewGrpcOptions() *GrpcOptions {
 	return &GrpcOptions{
 		Network: "tcp",
-		Addr:    "0.0.0.0:8001",
+		Addr:    "0.0.0.0:8091",
 		Timeout: 30 * time.Second,
 	}
 }

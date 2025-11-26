@@ -24,7 +24,7 @@ type HttpOptions struct {
 func NewHttpOptions() *HttpOptions {
 	return &HttpOptions{
 		Network: "tcp",
-		Addr:    "0.0.0.0:8443",
+		Addr:    "0.0.0.0:8001",
 		Timeout: 30 * time.Second,
 	}
 }
