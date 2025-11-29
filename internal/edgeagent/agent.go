@@ -3,6 +3,8 @@ package edgeagent
 import (
 	"context"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"os/signal"
 	"sync"
@@ -23,6 +25,8 @@ type Agent struct {
 
 	mqttclient   mqtt.Client
 	topicbuilder *mqtttopic.TopicBuilder
+
+	httpClient *http.Client
 
 	// 用于接收固件 URL 响应的通道
 	// Key: RequestID, Value: Response
@@ -94,7 +98,6 @@ func (a *Agent) handleMessage(ctx context.Context, topic string, payload []byte)
 		// 这是一个 URL 响应
 		a.reqMu.Lock()
 		if ch, ok := a.pendingRequests[resp.RequestId]; ok {
-			time.Sleep(10 * time.Second)
 			ch <- resp.DownloadUrl
 			delete(a.pendingRequests, resp.RequestId) // 清理
 		}
@@ -156,10 +159,12 @@ func (a *Agent) executeOTAProcess(cmd *pb.AgentCommand) {
 	a.mqttclient.Publish(context.Background(), topic, 1, false, reqBytes)
 
 	// 3. 等待响应 (带超时)
+	var downloadURL string
 	select {
 	case url := <-respChan:
+		downloadURL = url
 		log.Info("Received Firmware URL", "url", url)
-	case <-time.After(5 * time.Second):
+	case <-time.After(15 * time.Second):
 		log.Error(nil, "Timeout waiting for firmware URL")
 		a.publishStatus(cmd.CommandName, "Failed", "Timeout fetching URL")
 
@@ -172,10 +177,40 @@ func (a *Agent) executeOTAProcess(cmd *pb.AgentCommand) {
 
 	// 4. 开始下载 (Running)
 	a.publishStatus(cmd.CommandName, "Running", "Downloading firmware artifact...")
-	time.Sleep(3 * time.Second) // 模拟下载
+
+	// 执行真实的下载校验
+	if err := a.downloadAndVerify(downloadURL); err != nil {
+		log.Error(err, "Download failed")
+		a.publishStatus(cmd.CommandName, "Failed", fmt.Sprintf("Download failed: %v", err))
+		return
+	}
 
 	// 5. 完成
 	a.publishStatus(cmd.CommandName, "Succeeded", "Update installed")
+}
+
+// downloadAndVerify performs a real HTTP GET to validate the URL.
+// In a production agent, this would also verify SHA256 checksums and write to disk.
+func (a *Agent) downloadAndVerify(url string) error {
+	// 1. Create request
+	resp, err := a.httpClient.Get(url)
+	if err != nil {
+		return fmt.Errorf("network error: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// 2. Check status code (Expect 200 OK)
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("server returned status: %s", resp.Status)
+	}
+
+	// 3. Simulate consuming the body (or write to /tmp/firmware.bin)
+	// We just read it to ensure the stream is valid.
+	if _, err := io.Copy(io.Discard, resp.Body); err != nil {
+		return fmt.Errorf("failed to read body: %w", err)
+	}
+
+	return nil
 }
 
 func (a *Agent) publishStatus(cmdName, status, msg string) {

@@ -15,6 +15,7 @@ type HubOptions struct {
 	HttpOptions *options.HttpOptions `json:"http" mapstructure:"http"`
 	GrpcOptions *options.GrpcOptions `json:"grpc" mapstructure:"grpc"`
 	MqttOptions *options.MqttOptions `json:"mqtt" mapstructure:"mqtt"`
+	S3Options   *options.S3Options   `json:"s3" mapstructure:"s3"`
 	Log         *log.Options
 }
 
@@ -26,6 +27,7 @@ func NewHubOptions() *HubOptions {
 		HttpOptions: options.NewHttpOptions(),
 		GrpcOptions: options.NewGrpcOptions(),
 		MqttOptions: options.NewMqttOptions(),
+		S3Options:   options.NewS3Options(),
 		Log:         log.NewOptions(),
 	}
 
@@ -38,6 +40,7 @@ func (o *HubOptions) Flags() cliflag.NamedFlagSets {
 	o.HttpOptions.AddFlags(fss.FlagSet("http"))
 	o.GrpcOptions.AddFlags(fss.FlagSet("grpc"))
 	o.MqttOptions.AddFlags(fss.FlagSet("mqtt"))
+	o.S3Options.AddFlags(fss.FlagSet("s3"))
 	o.Log.AddFlags(fss.FlagSet("log"))
 	return fss
 }
@@ -52,6 +55,7 @@ func (o *HubOptions) Validate() error {
 	errs = append(errs, o.HttpOptions.Validate()...)
 	errs = append(errs, o.GrpcOptions.Validate()...)
 	errs = append(errs, o.MqttOptions.Validate()...)
+	errs = append(errs, o.S3Options.Validate()...)
 	errs = append(errs, o.Log.Validate()...)
 	return utilerrors.NewAggregate(errs)
 }
@@ -62,5 +66,6 @@ func (o *HubOptions) Config() (*hub.Config, error) {
 		HttpOptions: o.HttpOptions,
 		GrpcOptions: o.GrpcOptions,
 		MqttOptions: o.MqttOptions,
+		S3Options:   o.S3Options,
 	}, nil
 }

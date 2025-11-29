@@ -1,8 +1,11 @@
 package edgeagent
 
 import (
+	"crypto/tls"
 	"fmt"
+	"net/http"
 	"os"
+	"time"
 
 	"cloupeer.io/cloupeer/pkg/log"
 	"cloupeer.io/cloupeer/pkg/mqtt"
@@ -37,10 +40,20 @@ func (cfg *Config) NewAgent() (*Agent, error) {
 
 	topicbuilder := mqtttopic.NewTopicBuilder(cfg.MqttOptions.TopicRoot)
 
+	httpClient := &http.Client{
+		Timeout: 10 * time.Minute,
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
+		},
+	}
+
 	return &Agent{
 		vehicleID:       cfg.VehicleID,
 		mqttclient:      mqttclient,
 		topicbuilder:    topicbuilder,
+		httpClient:      httpClient,
 		pendingRequests: make(map[string]chan string),
 	}, nil
 }

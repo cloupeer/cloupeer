@@ -14,6 +14,7 @@ import (
 	controllerclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	pb "cloupeer.io/cloupeer/api/proto/v1"
+	"cloupeer.io/cloupeer/internal/hub/storage"
 	iovv1alpha1 "cloupeer.io/cloupeer/pkg/apis/iov/v1alpha1"
 	"cloupeer.io/cloupeer/pkg/log"
 	"cloupeer.io/cloupeer/pkg/mqtt"
@@ -27,11 +28,18 @@ type HubServer struct {
 	k8sclient    controllerclient.Client
 	mqttclient   mqtt.Client
 	topicbuilder *mqtttopic.TopicBuilder
+	storage      storage.Provider
 }
 
 // Run starts the HubServer and blocks until it stops.
 func (s *HubServer) Run(ctx context.Context) error {
 	log.Info("Starting cpeer-hub server...")
+
+	// 0. Check Storage Connectivity
+	if err := s.storage.CheckBucket(ctx); err != nil {
+		return fmt.Errorf("failed to connect to object storage: %w", err)
+	}
+	log.Info("Object Storage Connected")
 
 	// 1. Start MQTT Client (Critical Dependency)
 	// We start this synchronously because other components might depend on connectivity.
@@ -206,16 +214,24 @@ func (s *HubServer) handleFirmwareRequest(ctx context.Context, topic string, pay
 	}
 
 	log.Info("Received Firmware URL Request", "vehicleID", req.VehicleId, "ver", req.DesiredVersion)
+	resp := &pb.GetFirmwareURLResponse{RequestId: req.RequestId}
 
-	// 模拟生成 URL
-	resp := &pb.GetFirmwareURLResponse{
-		RequestId:   req.RequestId,
-		DownloadUrl: fmt.Sprintf("https://firmware.cloupeer.io/%s/%s.bin", req.VehicleId, req.DesiredVersion),
+	// 假设固件文件在存储桶中的路径格式为: {version}/vehicle.bin
+	// 在真实场景中，这里应该查询数据库或 K8s 获取该版本对应的真实 ObjectKey
+	objectKey := fmt.Sprintf("%s/vehicle.bin", req.DesiredVersion)
+
+	// 生成 1 小时有效期的链接
+	downloadURL, err := s.storage.GeneratePresignedURL(ctx, objectKey, 1*time.Hour)
+	if err != nil {
+		log.Error(err, "Failed to generate presigned URL")
+		resp.ErrorMessage = "Internal Server Error: Storage unavailable"
+	} else {
+		resp.DownloadUrl = downloadURL
 	}
 
 	// 发送响应
 	respBytes, _ := protojson.Marshal(resp)
-	err := s.mqttclient.Publish(ctx, s.topicbuilder.FirmwareURLResp(req.VehicleId), 1, false, respBytes)
+	err = s.mqttclient.Publish(ctx, s.topicbuilder.FirmwareURLResp(req.VehicleId), 1, false, respBytes)
 	if err != nil {
 		log.Error(err, "Failed to publish firmware URL response")
 	} else {
