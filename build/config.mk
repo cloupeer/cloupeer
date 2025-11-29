@@ -114,4 +114,4 @@ export CATALOG_IMG  ?=
 # List of components that should maintain static configurations.
 # These components are exempt from dynamic version/image injection during deployment
 # to prevent stateful workload restarts (e.g. StatefulSet forbidden updates).
-export INFRA_COMPONENTS ?= emqx mysql redis prometheus
+export INFRA_COMPONENTS ?= emqx mysql redis prometheus minio

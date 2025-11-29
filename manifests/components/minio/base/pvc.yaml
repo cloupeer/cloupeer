@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: minio-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: manual # 匹配 PV 中的 storageClassName
+  # volumeName: minio-pv-local # 可选：如果自动绑定失败，可以取消注释强行指定
