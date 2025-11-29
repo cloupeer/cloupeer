@@ -24,6 +24,10 @@ const (
 	// SuffixFirmwareResp represents the downstream response containing firmware URL (Cloud -> Edge).
 	// Structure: {root}/firmware/url/resp/{vehicleID}
 	SuffixFirmwareResp = "firmware/url/resp"
+
+	// SuffixRegister represents the upstream registration topic (Edge -> Cloud).
+	// Structure: {root}/register/{vehicleID}
+	SuffixRegister = "register"
 )
 
 // TopicBuilder encapsulates the logic for constructing MQTT topic strings.
@@ -76,6 +80,18 @@ func (b *TopicBuilder) FirmwareURLReqWildcard() string {
 // Direction: Cloud -> Edge
 func (b *TopicBuilder) FirmwareURLResp(vehicleID string) string {
 	return b.build(SuffixFirmwareResp, vehicleID)
+}
+
+// Register returns the topic string for a vehicle to register itself.
+// Direction: Edge -> Cloud
+func (b *TopicBuilder) Register(vehicleID string) string {
+	return b.build(SuffixRegister, vehicleID)
+}
+
+// RegisterWildcard returns the wildcard topic used by the Hub to subscribe to ALL registrations.
+// Result: {root}/register/+
+func (b *TopicBuilder) RegisterWildcard() string {
+	return b.build(SuffixRegister, "+")
 }
 
 // -----------------------------------------------------------------------------

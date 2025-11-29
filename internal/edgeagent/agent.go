@@ -56,6 +56,9 @@ func (a *Agent) Run(ctx context.Context) error {
 
 	a.setupMQTTSubscriptions(ctx)
 
+	// Send Registration/Online Message
+	go a.registerIdentity(ctx)
+
 	// 等待信号或上下文取消
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, os.Interrupt, syscall.SIGTERM)
@@ -226,5 +229,34 @@ func (a *Agent) publishStatus(cmdName, status, msg string) {
 
 	if err := a.mqttclient.Publish(context.Background(), topic, 1, false, bytes); err != nil {
 		log.Error(err, "Failed to publish status", "status", status)
+	}
+}
+
+// registerIdentity sends the initial registration packet to the Hub.
+func (a *Agent) registerIdentity(ctx context.Context) {
+	// Simulation: Get current version from local system
+	// In production, this comes from a version file or API.
+	currentVersion := "v1.0.0"
+
+	req := &pb.RegisterVehicleRequest{
+		VehicleId:       a.vehicleID,
+		FirmwareVersion: currentVersion,
+		Description:     "Edge Agent Auto-Registration",
+		Timestamp:       time.Now().Unix(),
+	}
+
+	bytes, err := protojson.Marshal(req)
+	if err != nil {
+		log.Error(err, "Failed to marshal registration request")
+		return
+	}
+
+	topic := a.topicbuilder.Register(a.vehicleID)
+
+	// Retry logic could be added here, but for now we send once (QoS 1 handles delivery)
+	if err := a.mqttclient.Publish(ctx, topic, 1, false, bytes); err != nil {
+		log.Error(err, "Failed to send registration request")
+	} else {
+		log.Info("Sent registration request", "topic", topic, "version", currentVersion)
 	}
 }

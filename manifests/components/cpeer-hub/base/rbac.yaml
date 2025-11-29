@@ -8,9 +8,12 @@ kind: ClusterRole
 metadata:
   name: hub-role
 rules:
-- apiGroups: [""]
-  resources: [""]
+- apiGroups: ["iov.cloupeer.io"]
+  resources: ["vehicles"]
   verbs: ["get", "list", "watch", "create", "patch", "update"]
+- apiGroups: ["iov.cloupeer.io"]
+  resources: ["vehiclecommands", "vehiclecommands/status"]
+  verbs: ["get", "list", "watch", "patch", "update"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding

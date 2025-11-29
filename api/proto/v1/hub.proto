@@ -81,3 +81,18 @@ message GetFirmwareURLResponse {
   // Error message if any
   string error_message = 3 [json_name = "errorMessage"];
 }
+
+// RegisterVehicleRequest is sent by the Agent when it comes online.
+message RegisterVehicleRequest {
+  // The unique identifier of the vehicle.
+  string vehicle_id = 1 [json_name = "vehicleID"];
+
+  // The current firmware version running on the vehicle.
+  string firmware_version = 2 [json_name = "firmwareVersion"];
+
+  // (Optional) A human-readable description or model info.
+  string description = 3 [json_name = "description"];
+  
+  // Timestamp of registration
+  int64 timestamp = 4 [json_name = "timestamp"];
+}

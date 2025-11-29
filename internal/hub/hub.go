@@ -10,7 +10,9 @@ import (
 
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/protobuf/encoding/protojson"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	controllerclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	pb "cloupeer.io/cloupeer/api/proto/v1"
@@ -118,6 +120,12 @@ func (s *HubServer) setupMQTTSubscriptions(ctx context.Context) error {
 	reqUrlTopic := s.topicbuilder.FirmwareURLReqWildcard()
 	if err := s.mqttclient.Subscribe(ctx, reqUrlTopic, 1, s.handleFirmwareRequest); err != nil {
 		return fmt.Errorf("failed to subscribe to req-url topic %s: %w", reqUrlTopic, err)
+	}
+
+	// Subscribe to registration requests
+	registerTopic := s.topicbuilder.RegisterWildcard()
+	if err := s.mqttclient.Subscribe(ctx, registerTopic, 1, s.handleRegistration); err != nil {
+		return fmt.Errorf("failed to subscribe to register topic %s: %w", registerTopic, err)
 	}
 
 	return nil
@@ -236,5 +244,111 @@ func (s *HubServer) handleFirmwareRequest(ctx context.Context, topic string, pay
 		log.Error(err, "Failed to publish firmware URL response")
 	} else {
 		log.Info("Sent Firmware URL", "url", resp.DownloadUrl)
+	}
+}
+
+// handleRegistration handles the auto-discovery of vehicles.
+func (s *HubServer) handleRegistration(ctx context.Context, topic string, payload []byte) {
+	// 1. Unmarshal payload
+	var req pb.RegisterVehicleRequest
+	if err := protojson.Unmarshal(payload, &req); err != nil {
+		log.Error(err, "Failed to unmarshal registration request")
+		return
+	}
+
+	if req.VehicleId == "" {
+		log.Warn("Received registration request without vehicleID")
+		return
+	}
+
+	log.Info("Received Registration Request", "vehicleID", req.VehicleId, "ver", req.FirmwareVersion)
+
+	// 2. Check if Vehicle exists
+	var vehicle iovv1alpha1.Vehicle
+	err := s.k8sclient.Get(ctx, types.NamespacedName{Name: req.VehicleId, Namespace: s.namespace}, &vehicle)
+
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			// --- Scenario A: New Vehicle (Auto-Create) ---
+
+			// Step 1: Create the CR skeleton (Spec only)
+			// [关键点] 我们特意将 Spec.FirmwareVersion 留空。
+			// 这表示控制平面此时对该车辆没有特定的版本要求（无意图）。
+			// 这样可以防止 Controller 误判 从而触发升级。
+			newVehicle := &iovv1alpha1.Vehicle{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      req.VehicleId,
+					Namespace: s.namespace,
+					Labels: map[string]string{
+						"app.kubernetes.io/managed-by":    "cpeer-hub",
+						"iov.cloupeer.io/auto-discovered": "true",
+					},
+				},
+				Spec: iovv1alpha1.VehicleSpec{
+					Description: req.Description,
+					// FirmwareVersion: "", // Explicitly left empty
+				},
+			}
+
+			if createErr := s.k8sclient.Create(ctx, newVehicle); createErr != nil {
+				log.Error(createErr, "Failed to create auto-discovered Vehicle", "vehicleID", req.VehicleId)
+				return
+			}
+			log.Info("Auto-discovered new Vehicle (Spec created)", "vehicleID", req.VehicleId)
+
+			// Step 2: Initialize Status
+			// 由于 K8s API Server 在 Create 时会丢弃 status 字段，我们必须发起第二次调用来专门更新它。
+			now := metav1.Now()
+			newVehicle.Status.LastSeenTime = &now
+			newVehicle.Status.ReportedFirmwareVersion = req.FirmwareVersion
+			newVehicle.Status.Phase = iovv1alpha1.VehiclePhaseIdle
+
+			// 初始化 Conditions，标记为 Ready 和 Synced
+			newVehicle.Status.Conditions = []metav1.Condition{
+				{
+					Type:               iovv1alpha1.ConditionTypeReady,
+					Status:             metav1.ConditionTrue,
+					Reason:             "AutoRegistered",
+					Message:            "Vehicle auto-registered successfully",
+					LastTransitionTime: now,
+				},
+				{
+					Type:               iovv1alpha1.ConditionTypeSynced,
+					Status:             metav1.ConditionTrue,
+					Reason:             "AutoRegistered",
+					Message:            fmt.Sprintf("Initial version %s", req.FirmwareVersion),
+					LastTransitionTime: now,
+				},
+			}
+
+			// 使用 Update 更新 Status 子资源 (因为这是一个全新的对象，Update 比 Patch 更直接且开销略小)
+			if statusErr := s.k8sclient.Status().Update(ctx, newVehicle); statusErr != nil {
+				log.Error(statusErr, "Failed to init Vehicle status", "vehicleID", req.VehicleId)
+			} else {
+				log.Info("Initialized Vehicle status", "vehicleID", req.VehicleId)
+			}
+			return
+		}
+		// Other API errors
+		log.Error(err, "Failed to query Vehicle", "vehicleID", req.VehicleId)
+		return
+	}
+
+	// --- Scenario B: Existing Vehicle (Update Heartbeat) ---
+	// Use Patch to minimize conflict
+	patch := controllerclient.MergeFrom(vehicle.DeepCopy())
+
+	now := metav1.Now()
+	vehicle.Status.LastSeenTime = &now
+
+	// Also update reported version if changed (e.g. manual update via USB)
+	if req.FirmwareVersion != "" {
+		vehicle.Status.ReportedFirmwareVersion = req.FirmwareVersion
+	}
+
+	if err := s.k8sclient.Status().Patch(ctx, &vehicle, patch); err != nil {
+		log.Error(err, "Failed to update Vehicle heartbeat", "vehicleID", req.VehicleId)
+	} else {
+		log.Debug("Updated Vehicle heartbeat", "vehicleID", req.VehicleId)
 	}
 }
