@@ -38,7 +38,7 @@ func (cfg *Config) NewAgent() (*Agent, error) {
 		return nil, err
 	}
 
-	topicbuilder := mqtttopic.NewTopicBuilder(cfg.MqttOptions.TopicRoot)
+	topicbuilder := mqtttopic.NewBuilder(cfg.MqttOptions.TopicRoot)
 
 	httpClient := &http.Client{
 		Timeout: 10 * time.Minute,

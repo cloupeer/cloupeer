@@ -10,6 +10,7 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 
 	pb "cloupeer.io/cloupeer/api/proto/v1"
+	"cloupeer.io/cloupeer/internal/pkg/mqtt/paths"
 	"cloupeer.io/cloupeer/pkg/log"
 	"cloupeer.io/cloupeer/pkg/mqtt"
 	mqtttopic "cloupeer.io/cloupeer/pkg/mqtt/topic"
@@ -20,7 +21,7 @@ type GrpcServer struct {
 	lis net.Listener
 }
 
-func (cfg *Config) NewGrpcServer(mqttClient mqtt.Client, topicBuilder *mqtttopic.TopicBuilder) (*GrpcServer, error) {
+func (cfg *Config) NewGrpcServer(mqttClient mqtt.Client, topicBuilder *mqtttopic.Builder) (*GrpcServer, error) {
 	lis, err := net.Listen("tcp", cfg.GrpcOptions.Addr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to listen on grpc addr %s: %w", cfg.GrpcOptions.Addr, err)
@@ -40,7 +41,7 @@ type grpcHandler struct {
 	pb.UnimplementedHubServiceServer
 
 	mqttclient   mqtt.Client
-	topicbuilder *mqtttopic.TopicBuilder
+	topicbuilder *mqtttopic.Builder
 }
 
 // SendCommand implements the gRPC method defined in hub.proto
@@ -51,7 +52,7 @@ func (h *grpcHandler) SendCommand(ctx context.Context, req *pb.SendCommandReques
 		"params", req.Parameters)
 
 	// 1. 构造 Topic
-	topic := h.topicbuilder.Command(req.VehicleId)
+	topic := h.topicbuilder.Build(paths.Command, req.VehicleId)
 
 	// 2. 构造 Payload (使用生成的 PB 结构体)
 	pbPayload := &pb.AgentCommand{

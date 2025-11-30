@@ -14,6 +14,7 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 
 	pb "cloupeer.io/cloupeer/api/proto/v1"
+	"cloupeer.io/cloupeer/internal/pkg/mqtt/paths"
 	"cloupeer.io/cloupeer/pkg/log"
 	"cloupeer.io/cloupeer/pkg/mqtt"
 	mqtttopic "cloupeer.io/cloupeer/pkg/mqtt/topic"
@@ -24,7 +25,7 @@ type Agent struct {
 	vehicleID string
 
 	mqttclient   mqtt.Client
-	topicbuilder *mqtttopic.TopicBuilder
+	topicbuilder *mqtttopic.Builder
 
 	httpClient *http.Client
 
@@ -74,12 +75,12 @@ func (a *Agent) Run(ctx context.Context) error {
 }
 
 func (a *Agent) setupMQTTSubscriptions(ctx context.Context) error {
-	cmdTopic := a.topicbuilder.Command(a.vehicleID)
+	cmdTopic := a.topicbuilder.Build(paths.Command, a.vehicleID)
 	if err := a.mqttclient.Subscribe(ctx, cmdTopic, 1, a.handleMessage); err != nil {
 		return fmt.Errorf("failed to subscribe to topic %s: %w", cmdTopic, err)
 	}
 
-	respTopic := a.topicbuilder.FirmwareURLResp(a.vehicleID)
+	respTopic := a.topicbuilder.Build(paths.OTAResponse, a.vehicleID)
 	if err := a.mqttclient.Subscribe(ctx, respTopic, 1, a.handleMessage); err != nil {
 		return fmt.Errorf("failed to subscribe to req-url topic %s: %w", respTopic, err)
 	}
@@ -158,7 +159,7 @@ func (a *Agent) executeOTAProcess(cmd *pb.AgentCommand) {
 	}
 	reqBytes, _ := protojson.Marshal(req)
 
-	topic := a.topicbuilder.FirmwareURLReq(a.vehicleID)
+	topic := a.topicbuilder.Build(paths.OTARequest, a.vehicleID)
 	a.mqttclient.Publish(context.Background(), topic, 1, false, reqBytes)
 
 	// 3. 等待响应 (带超时)
@@ -217,7 +218,7 @@ func (a *Agent) downloadAndVerify(url string) error {
 }
 
 func (a *Agent) publishStatus(cmdName, status, msg string) {
-	topic := a.topicbuilder.CommandAck(a.vehicleID)
+	topic := a.topicbuilder.Build(paths.CommandAck, a.vehicleID)
 
 	payload := &pb.AgentCommandStatus{
 		CommandName: cmdName,
@@ -251,7 +252,7 @@ func (a *Agent) registerIdentity(ctx context.Context) {
 		return
 	}
 
-	topic := a.topicbuilder.Register(a.vehicleID)
+	topic := a.topicbuilder.Build(paths.Register, a.vehicleID)
 
 	// Retry logic could be added here, but for now we send once (QoS 1 handles delivery)
 	if err := a.mqttclient.Publish(ctx, topic, 1, false, bytes); err != nil {

@@ -25,7 +25,7 @@ func (cfg *Config) NewHubServer() (*HubServer, error) {
 		return nil, err
 	}
 
-	topicbuilder := mqtttopic.NewTopicBuilder(cfg.MqttOptions.TopicRoot)
+	topicbuilder := mqtttopic.NewBuilder(cfg.MqttOptions.TopicRoot)
 
 	// 初始化存储 Provider
 	storageProvider, err := storage.NewMinIOProvider(cfg.S3Options)

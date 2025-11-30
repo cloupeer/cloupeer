@@ -1,105 +1,45 @@
 package topic
 
 import (
-	"fmt"
+	"strings"
 )
 
-// Constants defining the standard topic segments.
-// These act as the "Protocol Contract" between Cloud (Hub) and Edge (Agent).
-// Changing these values will break compatibility with existing agents.
-const (
-	// SuffixCommand represents the downstream command topic (Cloud -> Edge).
-	// Structure: {root}/command/{vehicleID}
-	SuffixCommand = "command"
-
-	// SuffixCommandAck represents the upstream command acknowledgement/status topic (Edge -> Cloud).
-	// By placing it under 'command/ack', we maintain logical grouping.
-	// Structure: {root}/command/ack/{vehicleID}
-	SuffixCommandAck = "command/ack"
-
-	// SuffixFirmwareReq represents the upstream request for firmware URL (Edge -> Cloud).
-	// Structure: {root}/firmware/url/req/{vehicleID}
-	SuffixFirmwareReq = "firmware/url/req"
-
-	// SuffixFirmwareResp represents the downstream response containing firmware URL (Cloud -> Edge).
-	// Structure: {root}/firmware/url/resp/{vehicleID}
-	SuffixFirmwareResp = "firmware/url/resp"
-
-	// SuffixRegister represents the upstream registration topic (Edge -> Cloud).
-	// Structure: {root}/register/{vehicleID}
-	SuffixRegister = "register"
-)
-
-// TopicBuilder encapsulates the logic for constructing MQTT topic strings.
-// It ensures type safety and consistency across the entire project.
-type TopicBuilder struct {
-	// root is the base namespace for all topics (e.g., "iov/v1", "cloupeer/prod").
+// Builder provides generic capabilities for constructing MQTT topics.
+// It handles path joining and wildcard appending without specific business logic.
+type Builder struct {
+	// root is the common prefix for all topics (e.g., "iov/v1").
 	root string
 }
 
-// NewTopicBuilder creates a new instance of TopicBuilder with the specified root namespace.
-func NewTopicBuilder(root string) *TopicBuilder {
-	return &TopicBuilder{root: root}
+// NewBuilder creates a new generic Topic Builder.
+func NewBuilder(root string) *Builder {
+	// Trim trailing slash to prevent double slashes.
+	return &Builder{
+		root: strings.TrimSuffix(root, "/"),
+	}
 }
 
-// -----------------------------------------------------------------------------
-// Topic Generation Methods
-// -----------------------------------------------------------------------------
-
-// Command returns the topic string for sending commands to a specific vehicle.
-// Direction: Cloud -> Edge
-func (b *TopicBuilder) Command(vehicleID string) string {
-	return b.build(SuffixCommand, vehicleID)
+// Build constructs a topic path by joining the root and provided segments.
+// Usage:
+//
+//	b.Build("command", "vh001") -> "root/command/vh001"
+//	b.Build("region", topic.Wildcard, "status") -> "root/region/+/status"
+func (b *Builder) Build(segments ...string) string {
+	// Pre-allocate slice capacity: root + segments.
+	parts := make([]string, 0, 1+len(segments))
+	parts = append(parts, b.root)
+	parts = append(parts, segments...)
+	return strings.Join(parts, "/")
 }
 
-// CommandAck returns the topic string for a vehicle to report command status.
-// Direction: Edge -> Cloud
-func (b *TopicBuilder) CommandAck(vehicleID string) string {
-	return b.build(SuffixCommandAck, vehicleID)
+// BuildWildcard appends segments and a single-level wildcard "+" at the end.
+// Usage: b.BuildWildcard("command", "ack") -> "root/command/ack/+"
+func (b *Builder) BuildWildcard(segments ...string) string {
+	return b.Build(append(segments, Wildcard)...)
 }
 
-// CommandAckWildcard returns the wildcard topic used by the Hub to subscribe to ALL acknowledgements.
-// Result: {root}/command/ack/+
-func (b *TopicBuilder) CommandAckWildcard() string {
-	return b.build(SuffixCommandAck, "+")
-}
-
-// FirmwareURLReq returns the topic string for a vehicle to request a firmware download URL.
-// Direction: Edge -> Cloud
-func (b *TopicBuilder) FirmwareURLReq(vehicleID string) string {
-	return b.build(SuffixFirmwareReq, vehicleID)
-}
-
-// FirmwareURLReqWildcard returns the wildcard topic used by the Hub to subscribe to ALL URL requests.
-// Result: {root}/firmware/url/req/+
-func (b *TopicBuilder) FirmwareURLReqWildcard() string {
-	return b.build(SuffixFirmwareReq, "+")
-}
-
-// FirmwareURLResp returns the topic string for the Hub to send the firmware URL back to the vehicle.
-// Direction: Cloud -> Edge
-func (b *TopicBuilder) FirmwareURLResp(vehicleID string) string {
-	return b.build(SuffixFirmwareResp, vehicleID)
-}
-
-// Register returns the topic string for a vehicle to register itself.
-// Direction: Edge -> Cloud
-func (b *TopicBuilder) Register(vehicleID string) string {
-	return b.build(SuffixRegister, vehicleID)
-}
-
-// RegisterWildcard returns the wildcard topic used by the Hub to subscribe to ALL registrations.
-// Result: {root}/register/+
-func (b *TopicBuilder) RegisterWildcard() string {
-	return b.build(SuffixRegister, "+")
-}
-
-// -----------------------------------------------------------------------------
-// Helper Methods
-// -----------------------------------------------------------------------------
-
-// build is a private helper to construct the final topic string.
-// Pattern: {root}/{suffix}/{identifier}
-func (b *TopicBuilder) build(suffix, id string) string {
-	return fmt.Sprintf("%s/%s/%s", b.root, suffix, id)
+// BuildMultiWildcard appends segments and a multi-level wildcard "#" at the end.
+// Usage: b.BuildMultiWildcard("sys") -> "root/sys/#"
+func (b *Builder) BuildMultiWildcard(segments ...string) string {
+	return b.Build(append(segments, MultiWildcard)...)
 }

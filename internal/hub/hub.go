@@ -17,6 +17,7 @@ import (
 
 	pb "cloupeer.io/cloupeer/api/proto/v1"
 	"cloupeer.io/cloupeer/internal/hub/storage"
+	"cloupeer.io/cloupeer/internal/pkg/mqtt/paths"
 	iovv1alpha1 "cloupeer.io/cloupeer/pkg/apis/iov/v1alpha1"
 	"cloupeer.io/cloupeer/pkg/log"
 	"cloupeer.io/cloupeer/pkg/mqtt"
@@ -29,7 +30,7 @@ type HubServer struct {
 	grpcserver   *GrpcServer
 	k8sclient    controllerclient.Client
 	mqttclient   mqtt.Client
-	topicbuilder *mqtttopic.TopicBuilder
+	topicbuilder *mqtttopic.Builder
 	storage      storage.Provider
 }
 
@@ -112,18 +113,18 @@ func (s *HubServer) Run(ctx context.Context) error {
 }
 
 func (s *HubServer) setupMQTTSubscriptions(ctx context.Context) error {
-	ackTopic := s.topicbuilder.CommandAckWildcard()
+	ackTopic := s.topicbuilder.BuildWildcard(paths.CommandAck)
 	if err := s.mqttclient.Subscribe(ctx, ackTopic, 1, s.handleStatusReport); err != nil {
 		return fmt.Errorf("failed to subscribe to ack topic %s: %w", ackTopic, err)
 	}
 
-	reqUrlTopic := s.topicbuilder.FirmwareURLReqWildcard()
-	if err := s.mqttclient.Subscribe(ctx, reqUrlTopic, 1, s.handleFirmwareRequest); err != nil {
-		return fmt.Errorf("failed to subscribe to req-url topic %s: %w", reqUrlTopic, err)
+	otaReqTopic := s.topicbuilder.BuildWildcard(paths.OTARequest)
+	if err := s.mqttclient.Subscribe(ctx, otaReqTopic, 1, s.handleFirmwareRequest); err != nil {
+		return fmt.Errorf("failed to subscribe to req-url topic %s: %w", otaReqTopic, err)
 	}
 
 	// Subscribe to registration requests
-	registerTopic := s.topicbuilder.RegisterWildcard()
+	registerTopic := s.topicbuilder.BuildWildcard(paths.Register)
 	if err := s.mqttclient.Subscribe(ctx, registerTopic, 1, s.handleRegistration); err != nil {
 		return fmt.Errorf("failed to subscribe to register topic %s: %w", registerTopic, err)
 	}
@@ -159,7 +160,7 @@ func (s *HubServer) runGRPCServer(ctx context.Context) error {
 
 // handleStatusReport 处理 Agent 上报的状态
 func (s *HubServer) handleStatusReport(ctx context.Context, topic string, payload []byte) {
-	if !strings.Contains(topic, mqtttopic.SuffixCommandAck) {
+	if !strings.Contains(topic, paths.CommandAck) {
 		return
 	}
 
@@ -206,7 +207,7 @@ func (s *HubServer) handleStatusReport(ctx context.Context, topic string, payloa
 }
 
 func (s *HubServer) handleFirmwareRequest(ctx context.Context, topic string, payload []byte) {
-	if !strings.Contains(topic, mqtttopic.SuffixFirmwareReq) {
+	if !strings.Contains(topic, paths.OTARequest) {
 		return
 	}
 
@@ -239,7 +240,7 @@ func (s *HubServer) handleFirmwareRequest(ctx context.Context, topic string, pay
 
 	// 发送响应
 	respBytes, _ := protojson.Marshal(resp)
-	err = s.mqttclient.Publish(ctx, s.topicbuilder.FirmwareURLResp(req.VehicleId), 1, false, respBytes)
+	err = s.mqttclient.Publish(ctx, s.topicbuilder.Build(paths.OTAResponse, req.VehicleId), 1, false, respBytes)
 	if err != nil {
 		log.Error(err, "Failed to publish firmware URL response")
 	} else {
