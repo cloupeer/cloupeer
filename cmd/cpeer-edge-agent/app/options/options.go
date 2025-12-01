@@ -11,7 +11,7 @@ import (
 )
 
 type AgentOptions struct {
-	VehicleID   string
+	VehicleID   string               `json:"id" mapstructure:"id"`
 	MqttOptions *options.MqttOptions `json:"mqtt" mapstructure:"mqtt"`
 	Log         *log.Options         `json:"log" mapstructure:"log"`
 }

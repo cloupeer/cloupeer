@@ -211,7 +211,7 @@ func (s *HubServer) handleFirmwareRequest(ctx context.Context, topic string, pay
 		return
 	}
 
-	var req pb.GetFirmwareURLRequest
+	var req pb.OTARequest
 	uo := protojson.UnmarshalOptions{DiscardUnknown: true}
 	if err := uo.Unmarshal(payload, &req); err != nil {
 		return
@@ -223,7 +223,7 @@ func (s *HubServer) handleFirmwareRequest(ctx context.Context, topic string, pay
 	}
 
 	log.Info("Received Firmware URL Request", "vehicleID", req.VehicleId, "ver", req.DesiredVersion)
-	resp := &pb.GetFirmwareURLResponse{RequestId: req.RequestId}
+	resp := &pb.OTAResponse{RequestId: req.RequestId}
 
 	// 假设固件文件在存储桶中的路径格式为: {version}/vehicle.bin
 	// 在真实场景中，这里应该查询数据库或 K8s 获取该版本对应的真实 ObjectKey

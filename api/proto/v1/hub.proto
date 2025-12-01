@@ -60,7 +60,7 @@ message AgentCommandStatus {
   string message = 3 [json_name = "message"];
 }
 
-message GetFirmwareURLRequest {
+message OTARequest {
   // Vehicle ID
   string vehicle_id = 1 [json_name = "vehicleID"];
   
@@ -71,7 +71,7 @@ message GetFirmwareURLRequest {
   string request_id = 3 [json_name = "requestID"];
 }
 
-message GetFirmwareURLResponse {
+message OTAResponse {
   // Corresponds to the request_id
   string request_id = 1 [json_name = "requestID"];
   
