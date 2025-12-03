@@ -71,7 +71,7 @@ _get_packages_for_components() {
                 # Rule 2: Component name has the "cpeer-" prefix.
                 # Remove the "cpeer-" prefix. e.g., "cpeer-edge-agent" -> "edge-agent"
                 local path_without_prefix="${comp#cpeer-}"
-                # Remove all remaining hyphens. e.g., "edge-agent" -> "edgeagent"
+                # Remove all remaining hyphens. e.g., "vehicle-agent" -> "vehicleagent"
                 internal_path="${path_without_prefix//-/}"
             else
                 # Rule 3: Component name does not have the "cpeer-" prefix.

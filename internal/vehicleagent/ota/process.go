@@ -1,0 +1,120 @@
+package ota
+
+import (
+	"context"
+	"crypto/tls"
+	"fmt"
+	"io"
+	"net/http"
+	"time"
+
+	pb "cloupeer.io/cloupeer/api/proto/v1"
+	"cloupeer.io/cloupeer/internal/vehicleagent/core"
+	"cloupeer.io/cloupeer/pkg/log"
+)
+
+func (m *Manager) AckCommand(ctx context.Context, name, status, message string) {
+	ack := &pb.AgentCommandStatus{
+		CommandName: name,
+		Status:      status,
+		Message:     message,
+	}
+
+	if err := m.sender.SendProto(ctx, core.EventCommandStatus, ack); err != nil {
+		log.Error(err, "Failed to ack command status", "name", name, "status", status, "message", message)
+	}
+}
+
+func (m *Manager) execute(ctx context.Context, cmd *pb.AgentCommand) {
+	// 1. ACK
+	m.AckCommand(ctx, cmd.CommandName, "Received", "Waiting for user confirmation...")
+
+	// 模拟：车主等待确认 (例如 2秒)
+	log.Info("[UI] User notification: New firmware available. Click to upgrade.")
+	time.Sleep(2 * time.Second)
+	log.Info("[UI] User clicked 'Upgrade'. Requesting URL...")
+
+	// 2. 请求 URL
+	targetVer := cmd.Parameters["version"]
+	reqID := fmt.Sprintf("req-%d", time.Now().UnixNano())
+
+	// 创建接收通道
+	respChan := make(chan string, 1)
+	m.lock.Lock()
+	m.pending[reqID] = respChan
+	m.lock.Unlock()
+
+	// 发送请求
+	req := &pb.OTARequest{
+		VehicleId:      m.vehicleID,
+		DesiredVersion: targetVer,
+		RequestId:      reqID,
+	}
+
+	err := m.sender.SendProto(ctx, core.EventOTARequest, req)
+	if err != nil {
+		log.Error(err, "Faile to send OTA request")
+	}
+
+	var downloadURL string
+
+	// 3. 等待响应 (带超时)
+	select {
+	case url := <-respChan:
+		downloadURL = url
+		log.Info("Received Firmware URL", "url", url)
+	case <-time.After(15 * time.Second):
+		log.Error(nil, "Timeout waiting for firmware URL")
+		m.AckCommand(ctx, cmd.CommandName, "Failed", "Timeout fetching URL")
+
+		// 清理 map
+		m.lock.Lock()
+		delete(m.pending, reqID)
+		m.lock.Unlock()
+		return
+	}
+
+	// 4. 开始下载 (Running)
+	m.AckCommand(ctx, cmd.CommandName, "Running", "Downloading firmware artifact...")
+
+	// 执行真实的下载校验
+	if err := downloadAndVerify(downloadURL); err != nil {
+		log.Error(err, "Download failed")
+		m.AckCommand(ctx, cmd.CommandName, "Failed", fmt.Sprintf("Download failed: %v", err))
+		return
+	}
+
+	// 5. 完成
+	m.AckCommand(ctx, cmd.CommandName, "Succeeded", "Update installed")
+}
+
+// downloadAndVerify performs a real HTTP GET to validate the URL.
+// In a production agent, this would also verify SHA256 checksums and write to disk.
+func downloadAndVerify(url string) error {
+	client := &http.Client{
+		Timeout: 10 * time.Minute,
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
+		},
+	}
+
+	resp, err := client.Get(url)
+	if err != nil {
+		return fmt.Errorf("network error: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("server returned status: %s", resp.Status)
+	}
+
+	// Simulate consuming the body (or write to /tmp/firmware.bin)
+	// We just read it to ensure the stream is valid.
+	if _, err := io.Copy(io.Discard, resp.Body); err != nil {
+		return fmt.Errorf("failed to read body: %w", err)
+	}
+
+	return nil
+}
