@@ -8,8 +8,9 @@ import (
 )
 
 type Manager struct {
-	vehicleID string
+	vid string
 
+	hal    core.HAL
 	sender core.Sender
 
 	lock    sync.Mutex
@@ -18,22 +19,19 @@ type Manager struct {
 
 var _ core.Module = (*Manager)(nil)
 
-func newManager(vid string) *Manager {
+func NewManager(vid string) *Manager {
 	return &Manager{
-		vehicleID: vid,
-		pending:   make(map[string]chan string),
+		vid:     vid,
+		pending: make(map[string]chan string),
 	}
-}
-
-func Register(vid string) {
-	core.Register(newManager(vid))
 }
 
 func (m *Manager) Name() string {
 	return "OTA"
 }
 
-func (m *Manager) Setup(ctx context.Context, sender core.Sender) error {
+func (m *Manager) Setup(ctx context.Context, hal core.HAL, sender core.Sender) error {
+	m.hal = hal
 	m.sender = sender
 	return nil
 }

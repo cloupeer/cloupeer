@@ -17,7 +17,7 @@ func (b *Hub) Register(event core.EventType, handler core.HandlerFunc) error {
 	if !ok {
 		return fmt.Errorf("unmapped event: %s", event)
 	}
-	fullTopic := b.topics.Build(segment, b.vehicleID)
+	fullTopic := b.topics.Build(segment, b.vid)
 	routes[fullTopic] = handler
 	return nil
 }

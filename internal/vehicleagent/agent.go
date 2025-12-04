@@ -12,22 +12,26 @@ import (
 )
 
 type Agent struct {
-	vehicleID string
-	hub       *hub.Hub
+	hal core.HAL
+	hub *hub.Hub
+
+	modules []core.Module
 }
 
-func NewAgent(vid string, hub *hub.Hub) *Agent {
+func NewAgent(hal core.HAL, hub *hub.Hub, modules ...core.Module) *Agent {
 	return &Agent{
-		vehicleID: vid,
-		hub:       hub,
+		hal:     hal,
+		hub:     hub,
+		modules: modules,
 	}
 }
 
 func (a *Agent) Run(ctx context.Context) error {
-	log.Info("Starting cpeer-edge-agent", "vehicleID", a.vehicleID)
+	vid := a.hal.GetVehicleID()
+	log.Info("Starting cpeer-edge-agent", "vehicleID", vid, "version", a.hal.GetFirmwareVersion())
 
-	for _, m := range core.GetModules() {
-		if err := m.Setup(ctx, a.hub); err != nil {
+	for _, m := range a.modules {
+		if err := m.Setup(ctx, a.hal, a.hub); err != nil {
 			return err
 		}
 
@@ -43,7 +47,7 @@ func (a *Agent) Run(ctx context.Context) error {
 	}
 	defer a.hub.Stop()
 
-	// Send Registration/Online Message
+	go a.confirmSystemHealth(ctx)
 	go a.registerIdentity(ctx)
 
 	<-ctx.Done()
@@ -52,16 +56,35 @@ func (a *Agent) Run(ctx context.Context) error {
 	return nil
 }
 
+func (a *Agent) confirmSystemHealth(ctx context.Context) {
+	// 策略：让系统先跑 10 秒。
+	// 如果这 10 秒内 Agent 没有 Crash，且 MQTT 连接保持正常，我们才认为“启动成功”。
+	select {
+	case <-ctx.Done():
+		return // 如果 10秒内系统就要关闭了，那就不标记了
+	case <-time.After(10 * time.Second):
+		if !a.hub.IsConnected() {
+			log.Warn("System running but MQTT not connected. Skipping Boot Success Mark.")
+			return
+		}
+
+		// --- 调用 HAL 标记成功 ---
+		log.Info("System stabilized. Marking boot as successful (Committing Slot B).")
+		if err := a.hal.MarkBootSuccessful(); err != nil {
+			// 仅仅记录错误，不退出程序，保业务
+			log.Error(err, "CRITICAL: Failed to write Boot Success flag to Bootloader. System might rollback on next reboot.")
+		} else {
+			log.Info("Boot successful marked. Rollback disabled.")
+		}
+	}
+}
+
 // registerIdentity sends the initial registration packet to the Hub.
 func (a *Agent) registerIdentity(ctx context.Context) {
-	// Simulation: Get current version from local system
-	// In production, this comes from a version file or API.
-	currentVersion := "v1.0.0"
-
 	req := &pb.RegisterVehicleRequest{
-		VehicleId:       a.vehicleID,
-		FirmwareVersion: currentVersion,
-		Description:     "Edge Agent Auto-Registration",
+		VehicleId:       a.hal.GetVehicleID(),
+		FirmwareVersion: a.hal.GetFirmwareVersion(),
+		Description:     "Vehicle Agent Auto-Registration",
 		Timestamp:       time.Now().Unix(),
 	}
 
@@ -71,5 +94,5 @@ func (a *Agent) registerIdentity(ctx context.Context) {
 		return
 	}
 
-	log.Info("Sent registration request", "version", currentVersion)
+	log.Info("Agent registered successfully", "version", req.FirmwareVersion)
 }

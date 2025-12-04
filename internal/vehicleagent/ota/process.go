@@ -26,8 +26,8 @@ func (m *Manager) AckCommand(ctx context.Context, name, status, message string) 
 }
 
 func (m *Manager) execute(ctx context.Context, cmd *pb.AgentCommand) {
-	// 1. ACK
-	m.AckCommand(ctx, cmd.CommandName, "Received", "Waiting for user confirmation...")
+	// 1. 收到指令 & 基础校验
+	m.AckCommand(ctx, cmd.CommandName, "Received", "Security check passed")
 
 	// 模拟：车主等待确认 (例如 2秒)
 	log.Info("[UI] User notification: New firmware available. Click to upgrade.")
@@ -46,7 +46,7 @@ func (m *Manager) execute(ctx context.Context, cmd *pb.AgentCommand) {
 
 	// 发送请求
 	req := &pb.OTARequest{
-		VehicleId:      m.vehicleID,
+		VehicleId:      m.vid,
 		DesiredVersion: targetVer,
 		RequestId:      reqID,
 	}
@@ -81,6 +81,44 @@ func (m *Manager) execute(ctx context.Context, cmd *pb.AgentCommand) {
 	if err := downloadAndVerify(downloadURL); err != nil {
 		log.Error(err, "Download failed")
 		m.AckCommand(ctx, cmd.CommandName, "Failed", fmt.Sprintf("Download failed: %v", err))
+		return
+	}
+
+	// 假设下载到这个位置
+	localFilePath := "/tmp/firmware.bin"
+
+	// 3. 安全门禁 (调用 HAL)
+	log.Info("Performing safety checks before installation...")
+	if err := m.hal.CheckSafety(); err != nil {
+		log.Error(err, "Safety check failed")
+		m.AckCommand(ctx, cmd.CommandName, "Failed", fmt.Sprintf("Safety check failed: %v", err))
+		return
+	}
+
+	// 4. 原子安装 (调用 HAL)
+	m.AckCommand(ctx, cmd.CommandName, "Running", "Installing to Slot B...")
+	if err := m.hal.InstallFirmware(localFilePath); err != nil {
+		log.Error(err, "Installation failed")
+		m.AckCommand(ctx, cmd.CommandName, "Failed", "Write partition failed")
+		return
+	}
+
+	// 5. 切换引导 (调用 HAL)
+	if err := m.hal.SwitchBootSlot(); err != nil {
+		m.AckCommand(ctx, cmd.CommandName, "Failed", "Switch slot failed")
+		return
+	}
+
+	// 6. 最终确认 & 重启
+	m.AckCommand(ctx, cmd.CommandName, "Running", "Rebooting system...")
+	log.Info("OTA sequence complete. Requesting system reboot.")
+
+	// 给一点时间让 MQTT 消息发出去
+	time.Sleep(1 * time.Second)
+
+	if err := m.hal.Reboot(); err != nil {
+		m.AckCommand(ctx, cmd.CommandName, "Failed", "Reboot failed")
+		log.Error(err, "Reboot failed")
 		return
 	}
 

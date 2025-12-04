@@ -11,7 +11,6 @@ import (
 )
 
 type AgentOptions struct {
-	VehicleID   string               `json:"id" mapstructure:"id"`
 	MqttOptions *options.MqttOptions `json:"mqtt" mapstructure:"mqtt"`
 	Log         *log.Options         `json:"log" mapstructure:"log"`
 }
@@ -29,10 +28,6 @@ func NewAgentOptions() *AgentOptions {
 
 func (o *AgentOptions) Flags() cliflag.NamedFlagSets {
 	fss := cliflag.NamedFlagSets{}
-
-	fs := fss.FlagSet("Agent")
-	fs.StringVar(&o.VehicleID, "vehicle-id", o.VehicleID, "The unique ID of this vehicle.")
-
 	o.MqttOptions.AddFlags(fss.FlagSet("mqtt"))
 	o.Log.AddFlags(fss.FlagSet("Log"))
 	return fss
@@ -50,12 +45,7 @@ func (o *AgentOptions) Validate() error {
 }
 
 func (o *AgentOptions) Config() (*vehicleagent.Config, error) {
-	if o.VehicleID == "" {
-		o.VehicleID = vehicleagent.DiscoverVehicleID()
-	}
-
 	return &vehicleagent.Config{
-		VehicleID:   o.VehicleID,
 		MqttOptions: o.MqttOptions,
 	}, nil
 }

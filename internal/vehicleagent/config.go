@@ -2,8 +2,8 @@ package vehicleagent
 
 import (
 	"fmt"
-	"os"
 
+	"cloupeer.io/cloupeer/internal/vehicleagent/hal"
 	"cloupeer.io/cloupeer/internal/vehicleagent/hub"
 	"cloupeer.io/cloupeer/internal/vehicleagent/ota"
 	"cloupeer.io/cloupeer/pkg/mqtt"
@@ -12,31 +12,41 @@ import (
 )
 
 type Config struct {
-	VehicleID   string
 	MqttOptions *options.MqttOptions
 }
 
 func (cfg *Config) NewAgent() (*Agent, error) {
-	if cfg.VehicleID == "" {
-		return nil, fmt.Errorf("vehicle-id is required")
+	var vid string
+	systemHAL := hal.NewHAL()
+
+	if vid = systemHAL.GetVehicleID(); vid == "" {
+		return nil, fmt.Errorf("FATAL: unable to retrieve VehicleID from HAL")
 	}
 
-	clientConfig := cfg.MqttOptions.ToClientConfig()
-	if clientConfig.ClientID == "" {
-		hostname, _ := os.Hostname()
-		clientConfig.ClientID = fmt.Sprintf("cpeer-agent-%s", hostname)
-	}
-
-	mqttClient, err := mqtt.NewClient(clientConfig)
+	mqttClient, topicBuilder, err := cfg.initMqttClientAndTopicBuilder(vid)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to init mqtt client")
+	}
+
+	return NewAgent(
+		systemHAL,
+		hub.New(vid, mqttClient, topicBuilder),
+		ota.NewManager(vid),
+	), nil
+}
+
+func (cfg *Config) initMqttClientAndTopicBuilder(vid string) (mqtt.Client, *mqtttopic.Builder, error) {
+	mqttConfig := cfg.MqttOptions.ToClientConfig()
+	if mqttConfig.ClientID == "" {
+		mqttConfig.ClientID = fmt.Sprintf("cpeer-agent-%s", vid)
+	}
+
+	mqttClient, err := mqtt.NewClient(mqttConfig)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	topicBuilder := mqtttopic.NewBuilder(cfg.MqttOptions.TopicRoot)
 
-	msgHub := hub.New(mqttClient, topicBuilder, cfg.VehicleID)
-
-	ota.Register(cfg.VehicleID)
-
-	return NewAgent(cfg.VehicleID, msgHub), nil
+	return mqttClient, topicBuilder, nil
 }

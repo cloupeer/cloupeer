@@ -15,7 +15,7 @@ import (
 )
 
 type Hub struct {
-	vehicleID string
+	vid string
 
 	mc     mqtt.Client
 	topics *mqtttopic.Builder
@@ -23,11 +23,11 @@ type Hub struct {
 
 var _ core.Sender = (*Hub)(nil)
 
-func New(client mqtt.Client, builder *mqtttopic.Builder, vid string) *Hub {
+func New(vid string, client mqtt.Client, topicbuilder *mqtttopic.Builder) *Hub {
 	return &Hub{
-		mc:        client,
-		topics:    builder,
-		vehicleID: vid,
+		mc:     client,
+		topics: topicbuilder,
+		vid:    vid,
 	}
 }
 
@@ -36,7 +36,7 @@ func (b *Hub) Send(ctx context.Context, event core.EventType, payload []byte) er
 	if !ok {
 		return fmt.Errorf("unmapped event: %s", event)
 	}
-	fullTopic := b.topics.Build(segment, b.vehicleID)
+	fullTopic := b.topics.Build(segment, b.vid)
 	return b.mc.Publish(ctx, fullTopic, 1, true, payload)
 }
 
@@ -46,6 +46,10 @@ func (b *Hub) SendProto(ctx context.Context, event core.EventType, msg proto.Mes
 		return err
 	}
 	return b.Send(ctx, event, payload)
+}
+
+func (b *Hub) IsConnected() bool {
+	return b.mc.IsConnected()
 }
 
 func (b *Hub) Start(ctx context.Context) error {
