@@ -84,10 +84,7 @@ func (m *Manager) execute(ctx context.Context, cmd *pb.AgentCommand) {
 		return
 	}
 
-	// 假设下载到这个位置
-	localFilePath := "/tmp/firmware.bin"
-
-	// 3. 安全门禁 (调用 HAL)
+	// 5. 安全门禁 (调用 HAL)
 	log.Info("Performing safety checks before installation...")
 	if err := m.hal.CheckSafety(); err != nil {
 		log.Error(err, "Safety check failed")
@@ -95,21 +92,21 @@ func (m *Manager) execute(ctx context.Context, cmd *pb.AgentCommand) {
 		return
 	}
 
-	// 4. 原子安装 (调用 HAL)
+	// 6. 原子安装 (调用 HAL)
 	m.AckCommand(ctx, cmd.CommandName, "Running", "Installing to Slot B...")
-	if err := m.hal.InstallFirmware(localFilePath); err != nil {
+	if err := m.hal.InstallFirmware("/tmp/firmware.bin", targetVer); err != nil {
 		log.Error(err, "Installation failed")
 		m.AckCommand(ctx, cmd.CommandName, "Failed", "Write partition failed")
 		return
 	}
 
-	// 5. 切换引导 (调用 HAL)
+	// 7. 切换引导 (调用 HAL)
 	if err := m.hal.SwitchBootSlot(); err != nil {
 		m.AckCommand(ctx, cmd.CommandName, "Failed", "Switch slot failed")
 		return
 	}
 
-	// 6. 最终确认 & 重启
+	// 8. 最终确认 & 重启
 	m.AckCommand(ctx, cmd.CommandName, "Running", "Rebooting system...")
 	log.Info("OTA sequence complete. Requesting system reboot.")
 
@@ -122,7 +119,7 @@ func (m *Manager) execute(ctx context.Context, cmd *pb.AgentCommand) {
 		return
 	}
 
-	// 5. 完成
+	// 9. 完成
 	m.AckCommand(ctx, cmd.CommandName, "Succeeded", "Update installed")
 }
 
