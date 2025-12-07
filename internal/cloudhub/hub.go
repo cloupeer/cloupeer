@@ -2,6 +2,7 @@ package cloudhub
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -113,23 +114,78 @@ func (s *HubServer) Run(ctx context.Context) error {
 }
 
 func (s *HubServer) setupMQTTSubscriptions(ctx context.Context) error {
-	ackTopic := s.topicbuilder.BuildWildcard(paths.CommandAck)
-	if err := s.mqttclient.Subscribe(ctx, ackTopic, 1, s.handleStatusReport); err != nil {
-		return fmt.Errorf("failed to subscribe to ack topic %s: %w", ackTopic, err)
-	}
+	// Define shared subscription group prefix
+	const groupName = "cpeer-hub"
 
-	otaReqTopic := s.topicbuilder.BuildWildcard(paths.OTARequest)
-	if err := s.mqttclient.Subscribe(ctx, otaReqTopic, 1, s.handleFirmwareRequest); err != nil {
-		return fmt.Errorf("failed to subscribe to req-url topic %s: %w", otaReqTopic, err)
-	}
-
-	// Subscribe to registration requests
-	registerTopic := s.topicbuilder.BuildWildcard(paths.Register)
+	// 1. Subscribe to Register (Shared)
+	registerTopic := s.topicbuilder.Shared(groupName).BuildWildcard(paths.Register)
 	if err := s.mqttclient.Subscribe(ctx, registerTopic, 1, s.handleRegistration); err != nil {
-		return fmt.Errorf("failed to subscribe to register topic %s: %w", registerTopic, err)
+		return fmt.Errorf("failed to subscribe to register topic: %w", err)
+	}
+
+	// 2. Subscribe to Online (Shared)
+	onlineTopic := s.topicbuilder.Shared(groupName).BuildWildcard(paths.Online)
+	if err := s.mqttclient.Subscribe(ctx, onlineTopic, 1, s.handleOnline); err != nil {
+		return fmt.Errorf("failed to subscribe to online topic: %w", err)
+	}
+
+	// 3. Subscribe to Ack (Shared)
+	ackTopic := s.topicbuilder.Shared(groupName).BuildWildcard(paths.CommandAck)
+	if err := s.mqttclient.Subscribe(ctx, ackTopic, 1, s.handleStatusReport); err != nil {
+		return fmt.Errorf("failed to subscribe to ack topic: %w", err)
+	}
+
+	// 4. Subscribe to OTA Request (Shared)
+	otaReqTopic := s.topicbuilder.Shared(groupName).BuildWildcard(paths.OTARequest)
+	if err := s.mqttclient.Subscribe(ctx, otaReqTopic, 1, s.handleOTARequest); err != nil {
+		return fmt.Errorf("failed to subscribe to req-url topic: %w", err)
 	}
 
 	return nil
+}
+
+// handleOnline processes vehicle connectivity status changes.
+func (s *HubServer) handleOnline(ctx context.Context, topic string, payload []byte) {
+	// Unmarshal using standard JSON because LWT payloads are often simple JSON
+	// (Ensure Agent sends compatible JSON structure matching the Proto definition)
+	var status pb.OnlineStatus
+	if err := json.Unmarshal(payload, &status); err != nil {
+		log.Error(err, "Failed to unmarshal online payload")
+		return
+	}
+
+	// Log the event for audit purposes (including the reason)
+	log.Info("Vehicle connectivity changed",
+		"vid", status.VehicleId,
+		"online", status.Online,
+		"reason", status.Reason)
+
+	// Update K8s CRD (Only Online field)
+	if err := s.updateVehicleOnlineStatus(ctx, status.VehicleId, status.Online); err != nil {
+		log.Error(err, "Failed to update vehicle status", "vid", status.VehicleId)
+	}
+}
+
+// updateVehicleOnlineStatus updates ONLY the status.online field and lastSeenTime.
+// It explicitly DOES NOT touch status.conditions['Ready'] to avoid race conditions with the Controller.
+func (s *HubServer) updateVehicleOnlineStatus(ctx context.Context, vid string, online bool) error {
+	var vehicle iovv1alpha1.Vehicle
+	// Use Get + Patch pattern for optimistic locking and minimal payload
+	if err := s.k8sclient.Get(ctx, types.NamespacedName{Name: vid, Namespace: s.namespace}, &vehicle); err != nil {
+		return controllerclient.IgnoreNotFound(err)
+	}
+
+	patch := controllerclient.MergeFrom(vehicle.DeepCopy())
+
+	// 1. Update the Physical Connectivity State
+	vehicle.Status.Online = online
+
+	// 2. Update Heartbeat
+	now := metav1.Now()
+	vehicle.Status.LastSeenTime = &now
+
+	// Apply Patch
+	return s.k8sclient.Status().Patch(ctx, &vehicle, patch)
 }
 
 func (s *HubServer) runHTTPServer(ctx context.Context) error {
@@ -206,7 +262,7 @@ func (s *HubServer) handleStatusReport(ctx context.Context, topic string, payloa
 	log.Info("Successfully patched VehicleCommand", "name", cmd.Name, "phase", statusMsg.Status)
 }
 
-func (s *HubServer) handleFirmwareRequest(ctx context.Context, topic string, payload []byte) {
+func (s *HubServer) handleOTARequest(ctx context.Context, topic string, payload []byte) {
 	if !strings.Contains(topic, paths.OTARequest) {
 		return
 	}

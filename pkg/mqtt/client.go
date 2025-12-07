@@ -63,6 +63,7 @@ func (c *pahoClient) Start(ctx context.Context) error {
 		TlsCfg: &tls.Config{
 			InsecureSkipVerify: c.cfg.InsecureSkipVerify,
 		},
+		WillMessage: c.willMessage(),
 		ClientConfig: paho.ClientConfig{
 			ClientID:           c.cfg.ClientID,
 			OnClientError:      c.onClientError,
@@ -229,6 +230,18 @@ func (c *pahoClient) router(p paho.PublishReceived) (bool, error) {
 	}
 
 	return true, nil // Always acknowledge reception
+}
+
+func (c *pahoClient) willMessage() *paho.WillMessage {
+	if c.cfg.WillTopic == "" {
+		return nil
+	}
+	return &paho.WillMessage{
+		Topic:   c.cfg.WillTopic,
+		Payload: c.cfg.WillPayload,
+		QoS:     c.cfg.WillQoS,
+		Retain:  c.cfg.WillRetain,
+	}
 }
 
 // topicsMatch checks if a topic matches a filter (supports wildcards + and #).

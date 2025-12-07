@@ -21,6 +21,11 @@ const (
 	// Pattern: {root}/register/{vehicleID}
 	Register = "register"
 
+	// Online is the topic segment for reporting vehicle online/offline status.
+	// Payload: { "online": true/false, "timestamp": ... }
+	// Pattern: {root}/online/{vehicleID}
+	Online = "online"
+
 	// CommandAck is the topic segment for command execution status updates.
 	// Pattern: {root}/command/ack/{vehicleID}
 	CommandAck = "command/ack"

@@ -39,6 +39,10 @@ type VehicleSpec struct {
 
 // VehicleStatus defines the observed state of Vehicle
 type VehicleStatus struct {
+	// Online indicates whether the vehicle agent is currently connected to the hub.
+	// +optional
+	Online bool `json:"online"`
+
 	// The last reported phase of the vehicle's OTA status.
 	// +optional
 	Phase VehiclePhase `json:"phase,omitempty"`
@@ -81,6 +85,7 @@ const (
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+//+kubebuilder:printcolumn:name="Online",type="boolean",JSONPath=".status.online",description="Vehicle Connection Status"
 //+kubebuilder:printcolumn:name="Phase",type="string",JSONPath=".status.phase",description="Vehicle OTA Phase"
 //+kubebuilder:printcolumn:name="Desired",type="string",JSONPath=".spec.firmwareVersion",description="Desired firmware version"
 //+kubebuilder:printcolumn:name="Reported",type="string",JSONPath=".status.reportedFirmwareVersion",description="Reported firmware version"

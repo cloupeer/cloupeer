@@ -1,8 +1,11 @@
 package vehicleagent
 
 import (
+	"encoding/json"
 	"fmt"
 
+	pb "cloupeer.io/cloupeer/api/proto/v1"
+	"cloupeer.io/cloupeer/internal/pkg/mqtt/paths"
 	"cloupeer.io/cloupeer/internal/vehicleagent/hal"
 	"cloupeer.io/cloupeer/internal/vehicleagent/hub"
 	"cloupeer.io/cloupeer/internal/vehicleagent/ota"
@@ -36,17 +39,29 @@ func (cfg *Config) NewAgent() (*Agent, error) {
 }
 
 func (cfg *Config) initMqttClientAndTopicBuilder(vid string) (mqtt.Client, *mqtttopic.Builder, error) {
+	topicBuilder := mqtttopic.NewBuilder(cfg.MqttOptions.TopicRoot)
+
 	mqttConfig := cfg.MqttOptions.ToClientConfig()
 	if mqttConfig.ClientID == "" {
 		mqttConfig.ClientID = fmt.Sprintf("cpeer-agent-%s", vid)
 	}
 
+	// We rely on Hub's reception time, so no timestamp in payload to avoid LWT staleness.
+	offlinePayload, _ := json.Marshal(pb.OnlineStatus{
+		VehicleId: vid,
+		Online:    false,
+		Reason:    "UnexpectedDisconnect",
+	})
+
+	mqttConfig.WillTopic = topicBuilder.Build(paths.Online, vid)
+	mqttConfig.WillPayload = offlinePayload
+	mqttConfig.WillQoS = 1
+	mqttConfig.WillRetain = true
+
 	mqttClient, err := mqtt.NewClient(mqttConfig)
 	if err != nil {
 		return nil, nil, err
 	}
-
-	topicBuilder := mqtttopic.NewBuilder(cfg.MqttOptions.TopicRoot)
 
 	return mqttClient, topicBuilder, nil
 }

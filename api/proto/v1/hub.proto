@@ -96,3 +96,11 @@ message RegisterVehicleRequest {
   // Timestamp of registration
   int64 timestamp = 4 [json_name = "timestamp"];
 }
+
+// OnlineStatus represents a vehicle's connectivity state change event.
+message OnlineStatus {
+  string vehicle_id = 1;
+  bool online = 2;
+  // Reason is for logging/audit purposes only (e.g., "UnexpectedDisconnect", "GracefulShutdown")
+  string reason = 3;
+}

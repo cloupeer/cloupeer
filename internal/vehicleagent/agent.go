@@ -2,6 +2,7 @@ package vehicleagent
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -47,6 +48,16 @@ func (a *Agent) Run(ctx context.Context) error {
 	}
 	defer a.hub.Stop()
 
+	if err := a.reportStatus(ctx, true); err != nil {
+		log.Error(err, "Failed to publish online status")
+		return err
+	}
+	defer func() {
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+		_ = a.reportStatus(shutdownCtx, false, "GracefulShutdown")
+	}()
+
 	go a.confirmSystemHealth(ctx)
 	go a.registerIdentity(ctx)
 
@@ -54,6 +65,20 @@ func (a *Agent) Run(ctx context.Context) error {
 	log.Info("Agent shutting down...")
 
 	return nil
+}
+
+func (a *Agent) reportStatus(ctx context.Context, online bool, reason ...string) error {
+	payload := &pb.OnlineStatus{
+		VehicleId: a.hal.GetVehicleID(),
+		Online:    online,
+	}
+
+	if len(reason) > 0 {
+		payload.Reason = reason[0]
+	}
+
+	data, _ := json.Marshal(payload)
+	return a.hub.Send(ctx, core.EventOnline, data)
 }
 
 func (a *Agent) confirmSystemHealth(ctx context.Context) {

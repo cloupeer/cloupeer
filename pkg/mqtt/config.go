@@ -29,6 +29,12 @@ type ClientConfig struct {
 	// InsecureSkipVerify disables TLS certificate verification.
 	// MUST be true for Cloupeer's self-signed certs environment.
 	InsecureSkipVerify bool
+
+	// Last Will and Testament (LWT) settings
+	WillTopic   string
+	WillPayload []byte
+	WillQoS     byte
+	WillRetain  bool
 }
 
 // setDefaultConfig applies safe default values to the configuration.

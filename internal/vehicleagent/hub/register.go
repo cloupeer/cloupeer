@@ -23,9 +23,10 @@ func (b *Hub) Register(event core.EventType, handler core.HandlerFunc) error {
 }
 
 func init() {
+	events[core.EventRegister] = paths.Register
+	events[core.EventOnline] = paths.Online
 	events[core.EventOTACommand] = paths.Command
 	events[core.EventOTARequest] = paths.OTARequest
 	events[core.EventOTAResponse] = paths.OTAResponse
 	events[core.EventCommandStatus] = paths.CommandAck
-	events[core.EventRegister] = paths.Register
 }

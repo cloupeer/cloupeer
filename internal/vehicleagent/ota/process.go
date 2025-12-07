@@ -26,7 +26,7 @@ func (m *Manager) AckCommand(ctx context.Context, name, status, message string) 
 }
 
 func (m *Manager) execute(ctx context.Context, cmd *pb.AgentCommand) {
-	// 1. 收到指令 & 基础校验
+	// 1. 收到指令
 	m.AckCommand(ctx, cmd.CommandName, "Received", "Security check passed")
 
 	// 模拟：车主等待确认 (例如 2秒)

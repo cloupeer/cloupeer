@@ -43,7 +43,7 @@ func (h *LinuxHAL) MarkBootSuccessful() error {
 	return nil
 }
 
-func (h *LinuxHAL) InstallFirmware(imagePath string) error {
+func (h *LinuxHAL) InstallFirmware(path string, version string) error {
 	// 真实：调用 swupdate 或 dd 命令
 	return nil
 }

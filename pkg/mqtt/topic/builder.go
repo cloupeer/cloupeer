@@ -1,6 +1,7 @@
 package topic
 
 import (
+	"fmt"
 	"strings"
 )
 
@@ -17,6 +18,21 @@ func NewBuilder(root string) *Builder {
 	return &Builder{
 		root: strings.TrimSuffix(root, "/"),
 	}
+}
+
+// Shared returns a NEW Builder instance with the shared subscription prefix.
+// It uses the "Immutable Pattern" to avoid side effects on the original builder.
+func (b *Builder) Shared(groupName string) *Builder {
+	cleanRoot := strings.TrimPrefix(b.root, "/")
+
+	var newRoot string
+	if cleanRoot == "" {
+		newRoot = fmt.Sprintf("$share/%s", groupName)
+	} else {
+		newRoot = fmt.Sprintf("$share/%s/%s", groupName, cleanRoot)
+	}
+
+	return &Builder{root: newRoot}
 }
 
 // Build constructs a topic path by joining the root and provided segments.
