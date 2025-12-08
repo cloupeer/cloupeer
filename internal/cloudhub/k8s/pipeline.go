@@ -1,0 +1,140 @@
+package k8s
+
+import (
+	"context"
+	"encoding/json"
+	"time"
+
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"cloupeer.io/cloupeer/internal/cloudhub/core/model"
+	"cloupeer.io/cloupeer/pkg/apis/iov/v1alpha1"
+	"cloupeer.io/cloupeer/pkg/log"
+)
+
+// StatusPipeline implements a write-merging buffer for K8s status updates.
+// It protects the K8s API server from being overwhelmed by high-frequency heartbeat events.
+type StatusPipeline struct {
+	namespace string
+	client    client.Client
+
+	// inputCh is the channel where high-velocity updates are pushed.
+	inputCh chan *model.VehicleStatusUpdate
+
+	// buffer stores the "latest" state for each vehicle ID.
+	// Map Key: Vehicle ID
+	buffer map[string]*model.VehicleStatusUpdate
+
+	// flushInterval determines how often we flush the aggregated state to K8s.
+	flushInterval time.Duration
+}
+
+// NewPipeline creates a new write-merging pipeline.
+func NewPipeline(ns string, c client.Client) *StatusPipeline {
+	return &StatusPipeline{
+		namespace:     ns,
+		client:        c,
+		inputCh:       make(chan *model.VehicleStatusUpdate, 5000), // Large buffer
+		buffer:        make(map[string]*model.VehicleStatusUpdate),
+		flushInterval: 1 * time.Second, // Aggregate 1s worth of data
+	}
+}
+
+// Start begins the background worker that processes the pipeline.
+// This should be run in a goroutine.
+func (p *StatusPipeline) Start(ctx context.Context) {
+	ticker := time.NewTicker(p.flushInterval)
+	defer ticker.Stop()
+
+	log.Info("K8s Status Pipeline started. Interval: %v", p.flushInterval)
+
+	for {
+		select {
+		case update := <-p.inputCh:
+			// MERGE STRATEGY: Last Write Wins (in memory)
+			// We only keep the latest update for each vehicle in the buffer map.
+			p.buffer[update.ID] = update
+
+			// Optimization: If buffer gets too large, force flush immediately
+			if len(p.buffer) >= 1000 {
+				p.flush(ctx)
+			}
+
+		case <-ticker.C:
+			// Time to sync to K8s
+			if len(p.buffer) > 0 {
+				p.flush(ctx)
+			}
+
+		case <-ctx.Done():
+			// Flush remaining data before exit
+			p.flush(context.Background())
+			return
+		}
+	}
+}
+
+// Push adds an update to the pipeline. It is non-blocking.
+func (p *StatusPipeline) Push(update *model.VehicleStatusUpdate) {
+	select {
+	case p.inputCh <- update:
+		// Success
+	default:
+		// Buffer full: Drop the heartbeat to protect the system (Load Shedding).
+		// For status updates, dropping a frame is better than crashing OOM.
+		log.Warn("Status pipeline full! Dropping update for vehicle: %s", update.ID)
+	}
+}
+
+// flush sends all buffered updates to K8s.
+// Note: K8s currently doesn't support bulk updates for different resources.
+// We still have to make N requests, BUT we saved M (M >> N) redundant requests via merging.
+func (p *StatusPipeline) flush(ctx context.Context) {
+	count := 0
+	for id, update := range p.buffer {
+		if err := p.patchStatus(ctx, id, update); err != nil {
+			log.Error(err, "Failed to patch vehicle status", "id", id)
+		}
+		count++
+	}
+
+	// Reset buffer after flush
+	p.buffer = make(map[string]*model.VehicleStatusUpdate)
+
+	log.Debug("Pipeline flushed %d updates to K8s", count)
+}
+
+// patchStatus performs a lightweight MergePatch on the Status subresource.
+func (p *StatusPipeline) patchStatus(ctx context.Context, id string, update *model.VehicleStatusUpdate) error {
+	// Construct a raw JSON patch for efficiency.
+	// We only want to touch specific fields in .status
+	// structure: {"status": {"online": true, "lastSeenTime": "..."}}
+
+	statusMap := map[string]interface{}{
+		"online":       update.Online,
+		"lastSeenTime": update.LastSeen,
+	}
+
+	// if update.FirmwareVersion != "" {
+	// 	statusMap["reportedFirmwareVersion"] = update.FirmwareVersion
+	// }
+
+	patchMap := map[string]interface{}{
+		"status": statusMap,
+	}
+
+	patchData, err := json.Marshal(patchMap)
+	if err != nil {
+		return err
+	}
+
+	// Use generic client to Patch.
+	// Note: We use MergePatchType on the Status subresource.
+	obj := &v1alpha1.Vehicle{}
+	obj.Name = id
+	obj.Namespace = p.namespace
+
+	patch := client.RawPatch(types.MergePatchType, patchData)
+	return p.client.Status().Patch(ctx, obj, patch)
+}

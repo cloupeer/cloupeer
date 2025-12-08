@@ -15,13 +15,13 @@ import (
 	"cloupeer.io/cloupeer/pkg/options"
 )
 
-type minioProvider struct {
+type MinIO struct {
 	client     *minio.Client
 	bucketName string
 }
 
-// NewMinIOProvider 创建基于 S3 协议的存储提供者
-func NewMinIOProvider(opts *options.S3Options) (Provider, error) {
+// NewMinIO 创建基于 S3 协议的存储服务
+func NewMinIO(opts *options.S3Options) (*MinIO, error) {
 	// 初始化 MinIO Client
 	// 注意：由于开发环境使用自签名证书，我们需要配置自定义的 Transport 来跳过验证
 	transport := &http.Transport{
@@ -39,13 +39,13 @@ func NewMinIOProvider(opts *options.S3Options) (Provider, error) {
 		return nil, fmt.Errorf("failed to create minio client: %w", err)
 	}
 
-	return &minioProvider{
+	return &MinIO{
 		client:     client,
 		bucketName: opts.BucketName,
 	}, nil
 }
 
-func (p *minioProvider) CheckBucket(ctx context.Context) error {
+func (p *MinIO) CheckBucket(ctx context.Context) error {
 	exists, err := p.client.BucketExists(ctx, p.bucketName)
 	if err != nil {
 		return fmt.Errorf("failed to check bucket existence: %w", err)
@@ -60,7 +60,13 @@ func (p *minioProvider) CheckBucket(ctx context.Context) error {
 	return nil
 }
 
-func (p *minioProvider) GeneratePresignedURL(ctx context.Context, objectKey string, expiry time.Duration) (string, error) {
+func (p *MinIO) GeneratePresignedURL(ctx context.Context, objectKey string, expiry time.Duration) (string, error) {
+	// Check Storage Connectivity
+	if err := p.CheckBucket(ctx); err != nil {
+		return "", fmt.Errorf("failed to connect to object storage: %w", err)
+	}
+	log.Info("Object Storage Connected")
+
 	// 生成预签名 URL
 	// Set request parameters for content-disposition.
 	reqParams := make(url.Values)
