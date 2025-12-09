@@ -2,6 +2,8 @@ package core
 
 import (
 	"context"
+
+	"cloupeer.io/cloupeer/internal/pkg/mqtt/adapter"
 )
 
 type Module interface {
@@ -9,5 +11,5 @@ type Module interface {
 
 	Setup(ctx context.Context, hal HAL, sender Sender) error
 
-	Routes() map[EventType]HandlerFunc
+	Routes() map[EventType]adapter.HandlerFunc
 }

@@ -16,7 +16,7 @@ func (s *Service) UpdateCommandStatus(ctx context.Context, cmdID string, status 
 
 	// Delegate to the repository
 	// The repository implementation (K8s adapter) will map this to a CRD Status update.
-	if err := s.cmdRepo.UpdateStatus2(ctx, cmdID, status, message); err != nil {
+	if err := s.command.UpdateStatus(ctx, cmdID, status, message); err != nil {
 		return fmt.Errorf("failed to update command status for %s: %w", cmdID, err)
 	}
 

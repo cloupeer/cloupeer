@@ -11,7 +11,6 @@ import (
 
 	iovv1alpha1 "cloupeer.io/cloupeer/pkg/apis/iov/v1alpha1"
 	"cloupeer.io/cloupeer/pkg/log"
-	"cloupeer.io/cloupeer/pkg/options"
 )
 
 // NewClient creates a generic K8s client for CRD operations.
@@ -46,7 +45,7 @@ func NewClient(kubeconfigPath string) (controllerclient.Client, error) {
 	return c, nil
 }
 
-func InitializeK8sClient(opts *options.KubeOptions) (controllerclient.Client, error) {
+func InitializeK8sClient() (controllerclient.Client, error) {
 	k8sconfig, err := config.GetConfig()
 	if err != nil {
 		log.Error(err, "failed to get kubernetes config")

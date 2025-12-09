@@ -6,6 +6,11 @@ import (
 	"cloupeer.io/cloupeer/internal/cloudhub/core/model"
 )
 
+type Repository interface {
+	Vehicle() VehicleRepository
+	Command() CommandRepository
+}
+
 // VehicleRepository defines the interface for interacting with vehicle persistent data.
 // In Cloupeer, this is implemented by the K8s Adapter.
 type VehicleRepository interface {
@@ -25,5 +30,5 @@ type VehicleRepository interface {
 // CommandRepository defines the interface for interacting with command persistent data.
 type CommandRepository interface {
 	// UpdateStatus updates the lifecycle phase of a command (e.g., Received -> Running).
-	UpdateStatus2(ctx context.Context, cmdID string, status model.CommandStatus, message string) error
+	UpdateStatus(ctx context.Context, cmdID string, status model.CommandStatus, message string) error
 }

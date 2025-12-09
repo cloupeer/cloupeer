@@ -4,6 +4,7 @@ import (
 	"context"
 	"sync"
 
+	"cloupeer.io/cloupeer/internal/pkg/mqtt/adapter"
 	"cloupeer.io/cloupeer/internal/vehicleagent/core"
 )
 
@@ -36,9 +37,9 @@ func (m *Manager) Setup(ctx context.Context, hal core.HAL, sender core.Sender) e
 	return nil
 }
 
-func (m *Manager) Routes() map[core.EventType]core.HandlerFunc {
-	return map[core.EventType]core.HandlerFunc{
-		core.EventOTACommand:  core.ProtoAdapter(m.HandleCommand),
-		core.EventOTAResponse: core.ProtoAdapter(m.HandleResponse),
+func (m *Manager) Routes() map[core.EventType]adapter.HandlerFunc {
+	return map[core.EventType]adapter.HandlerFunc{
+		core.EventOTACommand:  adapter.ProtoHandler(m.HandleCommand),
+		core.EventOTAResponse: adapter.ProtoHandler(m.HandleResponse),
 	}
 }

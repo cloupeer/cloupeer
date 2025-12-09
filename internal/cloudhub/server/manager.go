@@ -2,14 +2,9 @@ package server
 
 import (
 	"context"
-	"fmt"
 
 	"golang.org/x/sync/errgroup"
 
-	"cloupeer.io/cloupeer/internal/cloudhub/core/service"
-	"cloupeer.io/cloupeer/internal/cloudhub/server/grpc"
-	"cloupeer.io/cloupeer/internal/cloudhub/server/http"
-	"cloupeer.io/cloupeer/internal/cloudhub/server/mqtt"
 	"cloupeer.io/cloupeer/pkg/log"
 )
 
@@ -24,30 +19,10 @@ type Manager struct {
 }
 
 // NewManager creates a new server manager and initializes all sub-servers.
-func NewManager(cfg *Config, svc *service.Service) (*Manager, error) {
-	var servers []Server
-
-	// 1. Initialize MQTT Server (The Data Plane Gateway)
-	mqttSrv, err := mqtt.NewServer(cfg.MqttOptions, svc)
-	if err != nil {
-		return nil, fmt.Errorf("failed to init mqtt server: %w", err)
-	}
-	servers = append(servers, mqttSrv)
-
-	// 2. Initialize gRPC Server (The Control Plane Gateway)
-	grpcSrv, err := grpc.NewServer(cfg.GrpcOptions, svc)
-	if err != nil {
-		return nil, fmt.Errorf("failed to init grpc server: %w", err)
-	}
-	servers = append(servers, grpcSrv)
-
-	// 3. Initialize HTTP Server (Health & Metrics)
-	httpSrv := http.NewServer(cfg.HttpOptions)
-	servers = append(servers, httpSrv)
-
+func NewManager(servers ...Server) *Manager {
 	return &Manager{
 		servers: servers,
-	}, nil
+	}
 }
 
 // Start launches all servers in parallel and waits for termination.

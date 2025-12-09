@@ -21,11 +21,11 @@ func (s *Service) RegisterVehicle(ctx context.Context, v *model.Vehicle) error {
 	v.LastSeen = time.Now()
 
 	// Check existence
-	existing, err := s.vehicleRepo.Get(ctx, v.ID)
+	existing, err := s.vehicle.Get(ctx, v.ID)
 	if err != nil {
 		if errors.Is(err, util.ErrNotFound) {
 			// Create new vehicle
-			if err = s.vehicleRepo.Create(ctx, v); err != nil {
+			if err = s.vehicle.Create(ctx, v); err != nil {
 				return fmt.Errorf("failed to create vehicle: %w", err)
 			}
 		}
@@ -52,7 +52,7 @@ func (s *Service) UpdateOnlineStatus(ctx context.Context, vehicleID string, onli
 	}
 
 	// This calls the Repository's optimized (buffered) update method.
-	if err := s.vehicleRepo.BatchUpdateStatus(ctx, update); err != nil {
+	if err := s.vehicle.BatchUpdateStatus(ctx, update); err != nil {
 		return fmt.Errorf("failed to update online status: %w", err)
 	}
 

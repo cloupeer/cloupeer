@@ -47,7 +47,7 @@ func (p *StatusPipeline) Start(ctx context.Context) {
 	ticker := time.NewTicker(p.flushInterval)
 	defer ticker.Stop()
 
-	log.Info("K8s Status Pipeline started. Interval: %v", p.flushInterval)
+	log.Info("K8s Status Pipeline started", "Interval", p.flushInterval)
 
 	for {
 		select {
@@ -110,18 +110,18 @@ func (p *StatusPipeline) patchStatus(ctx context.Context, id string, update *mod
 	// Construct a raw JSON patch for efficiency.
 	// We only want to touch specific fields in .status
 	// structure: {"status": {"online": true, "lastSeenTime": "..."}}
-
-	statusMap := map[string]interface{}{
-		"online":       update.Online,
-		"lastSeenTime": update.LastSeen,
-	}
-
-	// if update.FirmwareVersion != "" {
-	// 	statusMap["reportedFirmwareVersion"] = update.FirmwareVersion
-	// }
-
-	patchMap := map[string]interface{}{
-		"status": statusMap,
+	patchMap := map[string]any{
+		"apiVersion": "iov.cloupeer.io/v1alpha1",
+		"kind":       "Vehicle",
+		"metadata": map[string]any{
+			"name":      id,
+			"namespace": p.namespace,
+		},
+		"status": map[string]any{
+			"online":       update.Online,
+			"lastSeenTime": update.LastSeen, // 确保这里序列化符合 RFC3339
+			// "reportedFirmwareVersion": update.FirmwareVersion,
+		},
 	}
 
 	patchData, err := json.Marshal(patchMap)
@@ -132,9 +132,10 @@ func (p *StatusPipeline) patchStatus(ctx context.Context, id string, update *mod
 	// Use generic client to Patch.
 	// Note: We use MergePatchType on the Status subresource.
 	obj := &v1alpha1.Vehicle{}
-	obj.Name = id
-	obj.Namespace = p.namespace
+	obj.SetName(id)
+	obj.SetNamespace(p.namespace)
 
-	patch := client.RawPatch(types.MergePatchType, patchData)
-	return p.client.Status().Patch(ctx, obj, patch)
+	patch := client.RawPatch(types.ApplyPatchType, patchData)
+	owner := client.FieldOwner("cpeer-cloudhub")
+	return p.client.Status().Patch(ctx, obj, patch, owner, client.ForceOwnership)
 }

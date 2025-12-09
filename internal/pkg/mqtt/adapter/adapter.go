@@ -1,4 +1,4 @@
-package mqtt
+package adapter
 
 import (
 	"context"
@@ -15,7 +15,7 @@ type TypedHandlerFunc[T any, P interface {
 	proto.Message
 }] func(ctx context.Context, msg P) error
 
-func ProtoAdapter[T any, P interface {
+func ProtoHandler[T any, P interface {
 	*T
 	proto.Message
 }](handler TypedHandlerFunc[T, P]) HandlerFunc {

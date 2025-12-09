@@ -7,7 +7,12 @@ import (
 	"cloupeer.io/cloupeer/internal/cloudhub/k8s"
 	"cloupeer.io/cloupeer/internal/cloudhub/notifier"
 	"cloupeer.io/cloupeer/internal/cloudhub/server"
+	"cloupeer.io/cloupeer/internal/cloudhub/server/grpc"
+	"cloupeer.io/cloupeer/internal/cloudhub/server/http"
+	"cloupeer.io/cloupeer/internal/cloudhub/server/mqtt"
 	"cloupeer.io/cloupeer/internal/cloudhub/storage"
+	pkgmqtt "cloupeer.io/cloupeer/pkg/mqtt"
+	"cloupeer.io/cloupeer/pkg/mqtt/topic"
 	"cloupeer.io/cloupeer/pkg/options"
 )
 
@@ -20,7 +25,7 @@ type Config struct {
 }
 
 func (cfg *Config) NewHubServer() (*CloudHubServer, error) {
-	k8sClient, err := k8s.InitializeK8sClient(cfg.KubeOptions)
+	k8sClient, err := k8s.InitializeK8sClient()
 	if err != nil {
 		return nil, err
 	}
@@ -29,34 +34,39 @@ func (cfg *Config) NewHubServer() (*CloudHubServer, error) {
 	// k8sRepo implements both VehicleRepository and CommandRepository
 	k8sRepo := k8s.NewRepository(cfg.KubeOptions.Namespace, k8sClient, pipeline)
 
-	// 2. Infrastructure: Storage (Secondary Adapter)
-	// 初始化存储 Provider
+	// Use the shared MQTT client factory from pkg/mqtt
+	mqttClient, err := pkgmqtt.NewClient(cfg.MqttOptions.ToClientConfig())
+	if err != nil {
+		return nil, fmt.Errorf("failed to init mqtt client: %w", err)
+	}
+
+	topicBuilder := topic.NewBuilder(cfg.MqttOptions.TopicRoot)
+
+	// Infrastructure: Storage (Secondary Adapter)
 	storageAdapter, err := storage.NewMinIO(cfg.S3Options)
 	if err != nil {
 		return nil, err
 	}
 
-	// 3. Infrastructure: Notifier (Secondary Adapter)
-	notifierAdapter, err := notifier.NewMQTTNotifier(cfg.MqttOptions)
+	// Infrastructure: Notifier (Secondary Adapter)
+	notifierAdapter, err := notifier.NewMQTTNotifier(mqttClient, topicBuilder)
 	if err != nil {
 		return nil, fmt.Errorf("failed to init notifier: %w", err)
 	}
 
-	// 4. Core Domain Service (The Business Logic)
+	// Core Domain Service (The Business Logic)
 	// Injecting all Secondary Adapters into the Core
-	svc := service.New(k8sRepo, k8sRepo, notifierAdapter, storageAdapter)
+	svc := service.New(k8sRepo, notifierAdapter, storageAdapter)
 
-	// 5. Ingress Servers (Primary Adapters)
+	// Ingress Servers (Primary Adapters)
 	// Injecting the Core Service into the Servers
-	serverConfig := &server.Config{
-		HttpOptions: cfg.HttpOptions,
-		GrpcOptions: cfg.GrpcOptions,
-		MqttOptions: cfg.MqttOptions,
-	}
-	srvManager, err := server.NewManager(serverConfig, svc)
+	grpcServer, err := grpc.NewServer(cfg.GrpcOptions, svc)
 	if err != nil {
-		return nil, fmt.Errorf("failed to init server manager: %w", err)
+		return nil, fmt.Errorf("failed to init grpc server: %w", err)
 	}
+	mqttServer := mqtt.NewServer(mqttClient, topicBuilder, svc)
+	httpServer := http.NewServer(cfg.HttpOptions)
+	srvManager := server.NewManager(mqttServer, grpcServer, httpServer)
 
 	return &CloudHubServer{
 		serverManager: srvManager,

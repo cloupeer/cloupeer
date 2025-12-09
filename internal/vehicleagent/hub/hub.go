@@ -8,6 +8,7 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 
+	"cloupeer.io/cloupeer/internal/pkg/mqtt/paths"
 	"cloupeer.io/cloupeer/internal/vehicleagent/core"
 	"cloupeer.io/cloupeer/pkg/log"
 	"cloupeer.io/cloupeer/pkg/mqtt"
@@ -36,7 +37,7 @@ func (b *Hub) Send(ctx context.Context, event core.EventType, payload []byte) er
 	if !ok {
 		return fmt.Errorf("unmapped event: %s", event)
 	}
-	fullTopic := b.topics.Build(segment, b.vid)
+	fullTopic := b.topics.Shared(paths.GroupCloudHub).Build(segment, b.vid)
 	return b.mc.Publish(ctx, fullTopic, 1, true, payload)
 }
 

@@ -3,16 +3,17 @@ package hub
 import (
 	"fmt"
 
+	"cloupeer.io/cloupeer/internal/pkg/mqtt/adapter"
 	"cloupeer.io/cloupeer/internal/pkg/mqtt/paths"
 	"cloupeer.io/cloupeer/internal/vehicleagent/core"
 )
 
 var (
 	events = make(map[core.EventType]string)
-	routes = make(map[string]core.HandlerFunc)
+	routes = make(map[string]adapter.HandlerFunc)
 )
 
-func (b *Hub) Register(event core.EventType, handler core.HandlerFunc) error {
+func (b *Hub) Register(event core.EventType, handler adapter.HandlerFunc) error {
 	segment, ok := events[event]
 	if !ok {
 		return fmt.Errorf("unmapped event: %s", event)
