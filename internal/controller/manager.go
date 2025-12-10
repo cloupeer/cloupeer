@@ -63,7 +63,7 @@ func setupControllers(ctx context.Context, mgr manager.Manager, hubAddr string) 
 	sche := mgr.GetScheme()
 
 	// EventRecorders for the controllers.
-	vehicleRecorder := mgr.GetEventRecorderFor("cloupeer-vehicle-controller")
+	vehicleRecorder := mgr.GetEventRecorderFor("cpeer-vehicle-controller")
 	commandRecorder := mgr.GetEventRecorderFor("cpeer-command-controller")
 
 	// Register Controllers

@@ -2,6 +2,7 @@ package vehiclecommand
 
 import (
 	"context"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -10,6 +11,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	iovv1alpha1 "cloupeer.io/cloupeer/pkg/apis/iov/v1alpha1"
 )
@@ -20,8 +22,7 @@ type Reconciler struct {
 	Scheme   *runtime.Scheme
 	Recorder record.EventRecorder
 
-	// HubClient is stored here to manage lifecycle
-	HubClient HubClient
+	runners []manager.Runnable
 
 	// subReconcilers is the list of logic processors
 	subReconcilers []SubReconciler
@@ -33,10 +34,10 @@ func NewReconciler(cli client.Client, sche *runtime.Scheme, recorder record.Even
 	hubClient := NewGrpcHubClient(hubAddr)
 
 	return &Reconciler{
-		Client:    cli,
-		Scheme:    sche,
-		Recorder:  recorder,
-		HubClient: hubClient,
+		Client:   cli,
+		Scheme:   sche,
+		Recorder: recorder,
+		runners:  []manager.Runnable{hubClient},
 		// Register the pipeline steps
 		subReconcilers: []SubReconciler{
 			NewSenderReconciler(hubClient),
@@ -126,8 +127,19 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
-	if err := mgr.Add(r.HubClient); err != nil {
-		return err
+	gc := &GarbageCollector{
+		Client:            mgr.GetClient(),
+		Log:               mgr.GetLogger().WithName("gc-vehicle-command"),
+		RetentionDuration: 30 * 24 * time.Hour, // Configurable via options later
+		CleanupInterval:   1 * time.Hour,       // Check every hour
+	}
+
+	r.runners = append(r.runners, gc)
+
+	for _, runner := range r.runners {
+		if err := mgr.Add(runner); err != nil {
+			return err
+		}
 	}
 
 	return ctrl.NewControllerManagedBy(mgr).
