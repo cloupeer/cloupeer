@@ -213,7 +213,7 @@ func (c *pahoClient) router(p paho.PublishReceived) (bool, error) {
 	matched := false
 	c.subscriptions.Range(func(key, value any) bool {
 		entry := value.(subscriptionEntry)
-		if topicsMatch(entry.topic, p.Packet.Topic) {
+		if topicsMatch(topicFilter(entry.topic), p.Packet.Topic) {
 			// Execute handler in a separate goroutine to avoid blocking the reader loop
 			// Or execute inline if logic is fast. Given "go" keyword is cheap:
 			go func(h MessageHandler) {
@@ -273,4 +273,15 @@ func topicsMatch(filter, topic string) bool {
 	}
 
 	return len(filterParts) == len(topicParts)
+}
+
+func topicFilter(filter string) string {
+	if strings.HasPrefix(filter, "$share/") {
+		// Format: $share/<group>/<topic>
+		parts := strings.SplitN(filter, "/", 3)
+		if len(parts) == 3 {
+			return parts[2]
+		}
+	}
+	return filter
 }

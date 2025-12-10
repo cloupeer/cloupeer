@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 
+	pb "cloupeer.io/cloupeer/api/proto/v1"
 	"cloupeer.io/cloupeer/internal/cloudhub/core/model"
 	"cloupeer.io/cloupeer/internal/pkg/mqtt/paths"
 	pkgmqtt "cloupeer.io/cloupeer/pkg/mqtt"
@@ -23,7 +24,15 @@ func NewMQTTNotifier(client pkgmqtt.Client, builder *topic.Builder) (*MQTTNotifi
 }
 
 func (n *MQTTNotifier) Notify(ctx context.Context, cmd *model.Command) error {
-	payload, err := json.Marshal(cmd)
+
+	agentCmd := &pb.AgentCommand{
+		CommandName: cmd.ID,
+		CommandType: string(cmd.Type),
+		Parameters:  cmd.Parameters,
+		Timestamp:   cmd.CreatedAt.Unix(),
+	}
+
+	payload, err := json.Marshal(agentCmd)
 	if err != nil {
 		return err
 	}

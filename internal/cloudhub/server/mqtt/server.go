@@ -66,7 +66,7 @@ func (s *Server) Start(ctx context.Context) error {
 
 func (s *Server) initMQTTSubscriptions(ctx context.Context) error {
 	// Define shared subscription group prefix
-	const groupName = paths.GroupCloudHub
+	const groupName = "cpeer-cloudhub"
 	const qos = 1
 
 	subscriptions := map[string]adapter.HandlerFunc{

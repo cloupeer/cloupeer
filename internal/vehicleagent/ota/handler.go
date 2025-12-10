@@ -10,15 +10,15 @@ import (
 )
 
 func (m *Manager) HandleCommand(ctx context.Context, cmd *pb.AgentCommand) error {
-	if cmd.CommandType != "OTA" {
-		return nil
-	}
-
 	log.Info(">>> PROCESSING COMMAND <<<",
 		"Type", cmd.CommandType,
 		"ID", cmd.CommandName,
 		"Params", cmd.Parameters,
 		"Time", time.Unix(cmd.Timestamp, 0).Format(time.RFC3339))
+
+	if cmd.CommandType != "OTA" {
+		return nil
+	}
 
 	// 这里是根据架构设计的后续步骤：
 	// 1. "触发一条消息提醒车主" -> Log / UI Event
