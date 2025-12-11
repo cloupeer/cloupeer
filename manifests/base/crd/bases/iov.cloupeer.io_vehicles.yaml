@@ -163,6 +163,322 @@ spec:
             type: object
         type: object
     served: true
+    storage: false
+    subresources:
+      status: {}
+  - additionalPrinterColumns:
+    - description: Vehicle Identification Number
+      jsonPath: .spec.vin
+      name: VIN
+      type: string
+    - description: Vehicle Model
+      jsonPath: .spec.vehicleModelRef
+      name: Model
+      type: string
+    - description: Connection Status
+      jsonPath: .status.online
+      name: Online
+      type: boolean
+    - description: Target Firmware Version
+      jsonPath: .spec.profile.firmware.version
+      name: Desired
+      type: string
+    - description: Current Firmware Version
+      jsonPath: .status.profile.firmware.version
+      name: Reported
+      type: string
+    - description: OTA Phase
+      jsonPath: .status.upgradeStatus.phase
+      name: Phase
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha2
+    schema:
+      openAPIV3Schema:
+        description: Vehicle is the Schema for the vehicles API
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: |-
+              VehicleSpec defines the desired state of Vehicle.
+              It focuses on high-level configuration and desired properties (Twins).
+            properties:
+              access:
+                description: |-
+                  Access contains the connectivity credentials and protocol settings
+                  used by CloudHub to manage the device connection.
+                properties:
+                  authSecretRef:
+                    description: |-
+                      AuthSecretRef references the secret containing client certificate or password.
+                      Using LocalObjectReference ensures security by restricting to the same namespace.
+                    properties:
+                      name:
+                        default: ""
+                        description: |-
+                          Name of the referent.
+                          This field is effectively required, but due to backwards compatibility is
+                          allowed to be empty. Instances of this type with an empty value here are
+                          almost certainly wrong.
+                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                        type: string
+                    type: object
+                    x-kubernetes-map-type: atomic
+                  clientID:
+                    description: |-
+                      ClientID is the MQTT client identifier.
+                      If empty, defaults to the Kubernetes metadata.name.
+                    type: string
+                type: object
+              profile:
+                description: |-
+                  Profile defines the core operational configuration of the vehicle.
+                  This struct is SHARED between Spec (Desired) and Status (Reported).
+                  It enables simple diffing logic: if Spec.Profile != Status.Profile, sync is needed.
+                properties:
+                  enableEdgeCompute:
+                    description: EnableEdgeCompute toggles the edge computing capabilities
+                      on the vehicle unit.
+                    type: boolean
+                  firmware:
+                    description: |-
+                      Firmware describes the software version and download location.
+                      In Spec: The version/url we want the vehicle to have.
+                      In Status: The version/url the vehicle currently has installed.
+                    properties:
+                      checksum:
+                        description: Checksum ensures the integrity of the binary
+                          (e.g., "sha256:xxxx").
+                        type: string
+                      downloadURL:
+                        description: DownloadURL is the location of the firmware bundle
+                          (S3/MinIO link).
+                        type: string
+                      version:
+                        description: Version is the semantic version of the bundle
+                          (e.g., "1.2.0-beta.1").
+                        type: string
+                    type: object
+                  maxSpeedLimit:
+                    description: |-
+                      MaxSpeedLimit defines the safety speed cap in km/h.
+                      Using pointer to distinguish between "0" (stop) and "unset" (no limit).
+                    format: int32
+                    maximum: 500
+                    minimum: 0
+                    type: integer
+                  otaPolicy:
+                    description: |-
+                      OTAPolicy defines the safeguards for Over-The-Air updates.
+                      In Spec: The policy we want to enforce.
+                      In Status: The policy currently active on the agent.
+                    properties:
+                      minBatteryLevel:
+                        description: |-
+                          MinBatteryLevel defines the minimum battery percentage (0-100) required to start an OTA.
+                          This is a POLICY, not the current battery level.
+                        format: int32
+                        maximum: 100
+                        minimum: 30
+                        type: integer
+                      retryLimit:
+                        description: RetryLimit defines how many times the agent should
+                          retry a failed update.
+                        format: int32
+                        type: integer
+                    type: object
+                type: object
+              properties:
+                additionalProperties:
+                  type: string
+                description: |-
+                  Properties holds the list of dynamic extension attributes.
+                  Used for non-core, model-specific features (e.g., "ambient_light_color": "blue").
+                type: object
+              vehicleModelRef:
+                description: |-
+                  VehicleModelRef references the definition of the vehicle model (e.g., "tesla-model-3-v1").
+                  This allows future validation of supported properties.
+                type: string
+              vin:
+                description: VIN (Vehicle Identification Number) is the unique business
+                  identifier.
+                pattern: ^[A-HJ-NPR-Z0-9]{17}$
+                type: string
+            required:
+            - vin
+            type: object
+          status:
+            description: VehicleStatus defines the observed state of Vehicle.
+            properties:
+              conditions:
+                description: Conditions represent the latest available observations
+                  of the Vehicle's state (e.g., Ready, Synced).
+                items:
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+              lastHeartbeatTime:
+                description: LastHeartbeatTime (Networking level).
+                format: date-time
+                type: string
+              online:
+                description: Online status derived from heartbeats.
+                type: boolean
+              profile:
+                description: |-
+                  Profile represents the actual configuration reported by the vehicle.
+                  The Controller compares Spec.Profile vs Status.Profile to determine 'Synced' condition.
+                properties:
+                  enableEdgeCompute:
+                    description: EnableEdgeCompute toggles the edge computing capabilities
+                      on the vehicle unit.
+                    type: boolean
+                  firmware:
+                    description: |-
+                      Firmware describes the software version and download location.
+                      In Spec: The version/url we want the vehicle to have.
+                      In Status: The version/url the vehicle currently has installed.
+                    properties:
+                      checksum:
+                        description: Checksum ensures the integrity of the binary
+                          (e.g., "sha256:xxxx").
+                        type: string
+                      downloadURL:
+                        description: DownloadURL is the location of the firmware bundle
+                          (S3/MinIO link).
+                        type: string
+                      version:
+                        description: Version is the semantic version of the bundle
+                          (e.g., "1.2.0-beta.1").
+                        type: string
+                    type: object
+                  maxSpeedLimit:
+                    description: |-
+                      MaxSpeedLimit defines the safety speed cap in km/h.
+                      Using pointer to distinguish between "0" (stop) and "unset" (no limit).
+                    format: int32
+                    maximum: 500
+                    minimum: 0
+                    type: integer
+                  otaPolicy:
+                    description: |-
+                      OTAPolicy defines the safeguards for Over-The-Air updates.
+                      In Spec: The policy we want to enforce.
+                      In Status: The policy currently active on the agent.
+                    properties:
+                      minBatteryLevel:
+                        description: |-
+                          MinBatteryLevel defines the minimum battery percentage (0-100) required to start an OTA.
+                          This is a POLICY, not the current battery level.
+                        format: int32
+                        maximum: 100
+                        minimum: 30
+                        type: integer
+                      retryLimit:
+                        description: RetryLimit defines how many times the agent should
+                          retry a failed update.
+                        format: int32
+                        type: integer
+                    type: object
+                type: object
+              properties:
+                additionalProperties:
+                  type: string
+                description: |-
+                  Properties holds the map of dynamic extension attributes (Reported State).
+                  Symmetric to Spec.Properties.
+                type: object
+              upgradeStatus:
+                description: |-
+                  UpgradeStatus tracks the PROGRESS of the current firmware installation.
+                  This separates "Configuration" (Profile) from "Execution State" (RetryCount).
+                properties:
+                  lastError:
+                    description: LastError stores the last failure reason for debugging.
+                    type: string
+                  phase:
+                    description: The last reported phase of the vehicle's OTA status.
+                    type: string
+                  retryCount:
+                    description: |-
+                      RetryCount tracks execution attempts.
+                      Compared against Spec.Profile.OTAPolicy.RetryLimit by the Agent/Controller.
+                    format: int32
+                    type: integer
+                type: object
+            type: object
+        type: object
+    served: true
     storage: true
     subresources:
       status: {}
