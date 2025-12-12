@@ -21,8 +21,7 @@ func (s *Server) handleRegister(ctx context.Context, req *pb.RegisterVehicleRequ
 
 	v := &model.Vehicle{
 		ID:              req.VehicleId,
-		FirmwareVersion: req.FirmwareVersion,
-		Description:     req.Description,
+		ReportedVersion: req.FirmwareVersion,
 		IsRegister:      true,
 	}
 

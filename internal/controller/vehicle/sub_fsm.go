@@ -15,7 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	iovv1alpha1 "cloupeer.io/cloupeer/pkg/apis/iov/v1alpha1"
+	iovv1alpha2 "cloupeer.io/cloupeer/pkg/apis/iov/v1alpha2"
 )
 
 // SubStateMachine 实现了 SubReconciler 接口
@@ -29,39 +29,39 @@ func NewSubStateMachine(cli client.Client) SubReconciler {
 }
 
 // Reconcile 实现了 SubReconciler 接口
-func (s *SubStateMachine) Reconcile(ctx context.Context, v *iovv1alpha1.Vehicle) (ctrl.Result, error) {
+func (s *SubStateMachine) Reconcile(ctx context.Context, v *iovv1alpha2.Vehicle) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
 
 	// 初始化状态
-	if v.Status.Phase == "" {
+	if v.Status.UpgradeStatus.Phase == "" {
 		logger.Info("Initializing Vehicle status: Phase not set, defaulting to Idle.")
-		v.Status.Phase = iovv1alpha1.VehiclePhaseIdle
-		SetCondition(v, iovv1alpha1.ConditionTypeReady, metav1.ConditionTrue, "Initialized", "Vehicle is ready")
+		v.Status.UpgradeStatus.Phase = iovv1alpha2.VehiclePhaseIdle
+		SetCondition(v, iovv1alpha2.ConditionTypeReady, metav1.ConditionTrue, "Initialized", "Vehicle is ready")
 		return ctrl.Result{}, nil // Patching a new status will trigger requeue
 	}
 
 	var err error
-	f := NewFiniteStateMachine(string(v.Status.Phase))
+	f := NewFiniteStateMachine(string(v.Status.UpgradeStatus.Phase))
 
 	// 根据当前状态触发事件
-	switch v.Status.Phase {
+	switch v.Status.UpgradeStatus.Phase {
 
-	case iovv1alpha1.VehiclePhaseIdle:
+	case iovv1alpha2.VehiclePhaseIdle:
 		// (Active) Try to start an update.
 		err = f.Event(ctx, EventUpdate, v)
 
-	case iovv1alpha1.VehiclePhasePending:
+	case iovv1alpha2.VehiclePhasePending:
 		err = s.handlePendingPhase(ctx, f, v)
 
-	case iovv1alpha1.VehiclePhaseSucceeded:
+	case iovv1alpha2.VehiclePhaseSucceeded:
 		// (Active) Finalize the successful update.
 		err = f.Event(ctx, EventFinalize, v)
 
-	case iovv1alpha1.VehiclePhaseFailed:
+	case iovv1alpha2.VehiclePhaseFailed:
 		// (Active) Handle automated retry logic
-		logger.Info("Entering 'Failed' state handler.", "currentAttempt", v.Status.RetryCount)
+		logger.Info("Entering 'Failed' state handler.", "currentAttempt", v.Status.UpgradeStatus.RetryCount)
 
-		failedCond := meta.FindStatusCondition(v.Status.Conditions, iovv1alpha1.ConditionTypeSynced)
+		failedCond := meta.FindStatusCondition(v.Status.Conditions, iovv1alpha2.ConditionTypeSynced)
 		if failedCond == nil || failedCond.Status == metav1.ConditionTrue {
 			// Safeguard
 			return ctrl.Result{}, nil
@@ -87,8 +87,8 @@ func (s *SubStateMachine) Reconcile(ctx context.Context, v *iovv1alpha1.Vehicle)
 
 		// 2. Check max retry count
 		const maxRetryCount = 5
-		if v.Status.RetryCount >= maxRetryCount {
-			logger.Info("Max retry count reached. Giving up.", "attempts", v.Status.RetryCount, "max", maxRetryCount)
+		if v.Status.UpgradeStatus.RetryCount >= maxRetryCount {
+			logger.Info("Max retry count reached. Giving up.", "attempts", v.Status.UpgradeStatus.RetryCount, "max", maxRetryCount)
 			return ctrl.Result{}, nil // Do nothing
 		}
 
@@ -97,17 +97,17 @@ func (s *SubStateMachine) Reconcile(ctx context.Context, v *iovv1alpha1.Vehicle)
 		// 1st retry (RetryCount=0): 2^0 * 1m = 1m
 		// 2nd retry (RetryCount=1): 2^1 * 1m = 2m
 		// 3rd retry (RetryCount=2): 2^2 * 1m = 4m
-		backoffDuration := time.Duration(math.Pow(2, float64(v.Status.RetryCount))) * baseDelay
+		backoffDuration := time.Duration(math.Pow(2, float64(v.Status.UpgradeStatus.RetryCount))) * baseDelay
 
 		elapsed := time.Since(failedCond.LastTransitionTime.Time)
 		if elapsed < backoffDuration {
 			requeueAfter := backoffDuration - elapsed
-			logger.Info("Waiting for exponential backoff before next retry", "nextAttempt", v.Status.RetryCount+1, "requeueAfter", requeueAfter)
+			logger.Info("Waiting for exponential backoff before next retry", "nextAttempt", v.Status.UpgradeStatus.RetryCount+1, "requeueAfter", requeueAfter)
 			return ctrl.Result{RequeueAfter: requeueAfter}, nil
 		}
 
 		// 4. Backoff time has passed. Trigger the retry.
-		logger.Info("Backoff complete. Triggering retry.", "nextAttempt", v.Status.RetryCount+1)
+		logger.Info("Backoff complete. Triggering retry.", "nextAttempt", v.Status.UpgradeStatus.RetryCount+1)
 		err = f.Event(ctx, EventRetry, v) // Trigger EventRetry (Failed -> Pending)
 
 	default:
@@ -121,59 +121,59 @@ func (s *SubStateMachine) Reconcile(ctx context.Context, v *iovv1alpha1.Vehicle)
 	}
 
 	// Sync FSM's internal state back to our CRD status.
-	v.Status.Phase = iovv1alpha1.VehiclePhase(f.Current())
+	v.Status.UpgradeStatus.Phase = iovv1alpha2.VehiclePhase(f.Current())
 
 	// Return empty result. If the status changed, the main controller's
 	// Patch() will trigger the next Reconcile.
 	return ctrl.Result{}, nil
 }
 
-func (s *SubStateMachine) handlePendingPhase(ctx context.Context, f *FiniteStateMachine, v *iovv1alpha1.Vehicle) error {
+func (s *SubStateMachine) handlePendingPhase(ctx context.Context, f *FiniteStateMachine, v *iovv1alpha2.Vehicle) error {
 	logger := log.FromContext(ctx)
 
 	// TODO: FirmwareVersion 可能包含 K8s 资源名称不允许的字符，需要对版本号进行 Slugify 处理或使用 Hash
-	safeVersion := strings.ReplaceAll(v.Spec.FirmwareVersion, "+", "-")
-	cmdName := fmt.Sprintf("ota-%s-%s-%d", v.Name, safeVersion, v.Status.RetryCount)
+	safeVersion := strings.ReplaceAll(v.Spec.Profile.Firmware.Version, "+", "-")
+	cmdName := fmt.Sprintf("ota-%s-%s-%d", v.Name, safeVersion, v.Status.UpgradeStatus.RetryCount)
 
-	var cmd iovv1alpha1.VehicleCommand
+	var cmd iovv1alpha2.VehicleCommand
 	if err := s.Get(ctx, types.NamespacedName{Namespace: v.Namespace, Name: cmdName}, &cmd); err != nil {
 		if !errors.IsNotFound(err) {
 			return err
 		}
 
-		cmd = iovv1alpha1.VehicleCommand{
+		cmd = iovv1alpha2.VehicleCommand{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      cmdName,
 				Namespace: v.Namespace,
 				OwnerReferences: []metav1.OwnerReference{
-					*metav1.NewControllerRef(v, iovv1alpha1.GroupVersion.WithKind("Vehicle")),
+					*metav1.NewControllerRef(v, iovv1alpha2.GroupVersion.WithKind("Vehicle")),
 				},
 			},
-			Spec: iovv1alpha1.VehicleCommandSpec{
+			Spec: iovv1alpha2.VehicleCommandSpec{
 				VehicleName: v.Name,
-				Command:     iovv1alpha1.CommandTypeOTA,
+				Method:      "OTA", // TODO: VehicleModel
 				Parameters: map[string]string{
-					"version": v.Spec.FirmwareVersion,
+					"version": v.Spec.Profile.Firmware.Version,
 				},
 			},
 		}
 
-		logger.Info("Creating new OTA Command", "command", cmdName, "targetVersion", v.Spec.FirmwareVersion)
-		SetCondition(v, iovv1alpha1.ConditionTypeSynced, metav1.ConditionFalse, "Updating", "Creating new OTA Command")
+		logger.Info("Creating new OTA Command", "command", cmdName, "targetVersion", v.Spec.Profile.Firmware.Version)
+		SetCondition(v, iovv1alpha2.ConditionTypeSynced, metav1.ConditionFalse, "Updating", "Creating new OTA Command")
 		return s.Create(ctx, &cmd)
 	}
 
 	switch cmd.Status.Phase {
 
-	case iovv1alpha1.CommandPhaseSucceeded:
+	case iovv1alpha2.CommandPhaseSucceeded:
 		return f.Event(ctx, EventSuccess, v)
 
-	case iovv1alpha1.CommandPhaseFailed:
+	case iovv1alpha2.CommandPhaseFailed:
 		return f.Event(ctx, EventFail, v, cmd.Status.Message)
 
 	default:
 		msg := fmt.Sprintf("Waiting for OTA command. Phase: %s, Message: %s", cmd.Status.Phase, cmd.Status.Message)
-		SetCondition(v, iovv1alpha1.ConditionTypeSynced, metav1.ConditionFalse, "Updating", msg)
+		SetCondition(v, iovv1alpha2.ConditionTypeSynced, metav1.ConditionFalse, "Updating", msg)
 	}
 
 	return nil

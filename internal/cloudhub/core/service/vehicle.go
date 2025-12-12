@@ -18,7 +18,7 @@ import (
 func (s *Service) RegisterVehicle(ctx context.Context, v *model.Vehicle) error {
 	// Default to Online=true upon registration
 	v.Online = true
-	v.LastSeen = time.Now()
+	v.LastHeartbeatTime = time.Now()
 
 	// Check existence
 	existing, err := s.vehicle.Get(ctx, v.ID)
@@ -46,9 +46,9 @@ func (s *Service) RegisterVehicle(ctx context.Context, v *model.Vehicle) error {
 // This is a high-frequency operation.
 func (s *Service) UpdateOnlineStatus(ctx context.Context, vehicleID string, online bool) error {
 	update := &model.VehicleStatusUpdate{
-		ID:       vehicleID,
-		Online:   online,
-		LastSeen: time.Now(),
+		ID:                vehicleID,
+		Online:            online,
+		LastHeartbeatTime: time.Now(),
 	}
 
 	// This calls the Repository's optimized (buffered) update method.

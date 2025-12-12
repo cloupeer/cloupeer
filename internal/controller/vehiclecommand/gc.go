@@ -7,7 +7,7 @@ import (
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	iovv1alpha1 "cloupeer.io/cloupeer/pkg/apis/iov/v1alpha1"
+	iovv1alpha2 "cloupeer.io/cloupeer/pkg/apis/iov/v1alpha2"
 )
 
 // GarbageCollector handles the periodic cleanup of stale VehicleCommand resources.
@@ -48,7 +48,7 @@ func (gc *GarbageCollector) cleanup(ctx context.Context) {
 	// Note: In a production environment with millions of records, consider using
 	// Pagination (Continue/Limit) or Listing with specific labels to reduce memory footprint.
 	// For now, listing from the specialized controller-runtime cache is efficient enough.
-	cmdList := &iovv1alpha1.VehicleCommandList{}
+	cmdList := &iovv1alpha2.VehicleCommandList{}
 	if err := gc.Client.List(ctx, cmdList); err != nil {
 		gc.Log.Error(err, "Failed to list VehicleCommands for GC")
 		return
@@ -91,8 +91,8 @@ func (gc *GarbageCollector) cleanup(ctx context.Context) {
 }
 
 // isTerminalState determines if the command has finished its lifecycle.
-func isTerminalState(cmd *iovv1alpha1.VehicleCommand) bool {
+func isTerminalState(cmd *iovv1alpha2.VehicleCommand) bool {
 	phase := cmd.Status.Phase
-	return phase == iovv1alpha1.CommandPhaseSucceeded ||
-		phase == iovv1alpha1.CommandPhaseFailed
+	return phase == iovv1alpha2.CommandPhaseSucceeded ||
+		phase == iovv1alpha2.CommandPhaseFailed
 }

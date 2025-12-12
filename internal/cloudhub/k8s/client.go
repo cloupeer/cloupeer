@@ -9,7 +9,7 @@ import (
 	controllerclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 
-	iovv1alpha1 "cloupeer.io/cloupeer/pkg/apis/iov/v1alpha1"
+	iovv1alpha2 "cloupeer.io/cloupeer/pkg/apis/iov/v1alpha2"
 	"cloupeer.io/cloupeer/pkg/log"
 )
 
@@ -32,10 +32,9 @@ func NewClient(kubeconfigPath string) (controllerclient.Client, error) {
 
 	// Register our API types (Vehicle, VehicleCommand) into the scheme
 	// Scheme is required by controller-runtime client to understand our CRDs.
-	// scheme := v1alpha1.SchemeBuilder.GetScheme()
 	cloupeerscheme := runtime.NewScheme()
 	utilruntime.Must(scheme.AddToScheme(cloupeerscheme)) // Add standard schemes like v1.Pod, etc.
-	utilruntime.Must(iovv1alpha1.AddToScheme(cloupeerscheme))
+	utilruntime.Must(iovv1alpha2.AddToScheme(cloupeerscheme))
 
 	c, err := controllerclient.New(cfg, controllerclient.Options{Scheme: cloupeerscheme})
 	if err != nil {
@@ -55,7 +54,7 @@ func InitializeK8sClient() (controllerclient.Client, error) {
 	// Create a new scheme and add all our API types and standard types
 	cloupeerscheme := runtime.NewScheme()
 	utilruntime.Must(scheme.AddToScheme(cloupeerscheme)) // Add standard schemes like v1.Pod, etc.
-	utilruntime.Must(iovv1alpha1.AddToScheme(cloupeerscheme))
+	utilruntime.Must(iovv1alpha2.AddToScheme(cloupeerscheme))
 
 	k8sclient, err := controllerclient.New(k8sconfig, controllerclient.Options{Scheme: cloupeerscheme})
 	if err != nil {

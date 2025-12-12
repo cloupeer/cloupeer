@@ -7,11 +7,11 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	iovv1alpha1 "cloupeer.io/cloupeer/pkg/apis/iov/v1alpha1"
+	iovv1alpha2 "cloupeer.io/cloupeer/pkg/apis/iov/v1alpha2"
 )
 
-func isNewVersion(v *iovv1alpha1.Vehicle) bool {
-	return v.Spec.FirmwareVersion != "" && v.Spec.FirmwareVersion != v.Status.ReportedFirmwareVersion
+func isNewVersion(v *iovv1alpha2.Vehicle) bool {
+	return v.Spec.Profile.Firmware.Version != "" && v.Spec.Profile.Firmware.Version != v.Status.Profile.Firmware.Version
 }
 
 func isFsmRealError(err error) bool {
@@ -32,7 +32,7 @@ func isFsmRealError(err error) bool {
 // --- K8s Condition Helpers ---
 
 // SetCondition 辅助函数，用于设置 Vehicle 的 Condition
-func SetCondition(v *iovv1alpha1.Vehicle, conditionType string, status metav1.ConditionStatus, reason, message string) {
+func SetCondition(v *iovv1alpha2.Vehicle, conditionType string, status metav1.ConditionStatus, reason, message string) {
 	meta.SetStatusCondition(&v.Status.Conditions, metav1.Condition{
 		Type:               conditionType,
 		Status:             status,
@@ -41,15 +41,13 @@ func SetCondition(v *iovv1alpha1.Vehicle, conditionType string, status metav1.Co
 		ObservedGeneration: v.Generation,
 		LastTransitionTime: metav1.Now(),
 	})
-
-	v.Status.Message = message
 }
 
 func FindLatestCondition(conditions []metav1.Condition) *metav1.Condition {
 	var latestCond *metav1.Condition
 
 	for i := range conditions {
-		if conditions[i].Type == iovv1alpha1.ConditionTypeReady {
+		if conditions[i].Type == iovv1alpha2.ConditionTypeReady {
 			continue
 		}
 

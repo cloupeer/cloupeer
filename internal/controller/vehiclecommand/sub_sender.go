@@ -10,7 +10,7 @@ import (
 
 	pb "cloupeer.io/cloupeer/api/proto/v1"
 	"cloupeer.io/cloupeer/internal/pkg/metrics"
-	iovv1alpha1 "cloupeer.io/cloupeer/pkg/apis/iov/v1alpha1"
+	iovv1alpha2 "cloupeer.io/cloupeer/pkg/apis/iov/v1alpha2"
 )
 
 // SenderReconciler is responsible for sending pending commands to the Hub.
@@ -27,20 +27,20 @@ func NewSenderReconciler(hubClient HubClient) *SenderReconciler {
 }
 
 // Reconcile implements the SubReconciler interface.
-func (s *SenderReconciler) Reconcile(ctx context.Context, cmd *iovv1alpha1.VehicleCommand) (ctrl.Result, error) {
+func (s *SenderReconciler) Reconcile(ctx context.Context, cmd *iovv1alpha2.VehicleCommand) (ctrl.Result, error) {
 	// 1. Filter: Only process commands in 'Pending' phase
-	if cmd.Status.Phase != iovv1alpha1.CommandPhasePending {
+	if cmd.Status.Phase != iovv1alpha2.CommandPhasePending {
 		return ctrl.Result{}, nil
 	}
 
 	logger := log.FromContext(ctx)
-	logger.Info("Processing Pending command", "command", cmd.Spec.Command, "vehicle", cmd.Spec.VehicleName)
+	logger.Info("Processing Pending command", "command", cmd.Spec.Method, "vehicle", cmd.Spec.VehicleName)
 
 	// 2. Construct the gRPC request
 	req := &pb.SendCommandRequest{
 		CommandName: cmd.Name,
 		VehicleId:   cmd.Spec.VehicleName,
-		CommandType: string(cmd.Spec.Command),
+		CommandType: cmd.Spec.Method,
 		Parameters:  cmd.Spec.Parameters,
 	}
 
@@ -48,10 +48,10 @@ func (s *SenderReconciler) Reconcile(ctx context.Context, cmd *iovv1alpha1.Vehic
 	start := time.Now()
 	resp, err := s.HubClient.SendCommand(ctx, req)
 	duration := time.Since(start).Seconds()
-	metrics.CommandLatency.WithLabelValues(string(cmd.Spec.Command)).Observe(duration)
+	metrics.CommandLatency.WithLabelValues(string(cmd.Spec.Method)).Observe(duration)
 	if err != nil {
 		logger.Error(err, "Failed to send command to Hub")
-		metrics.CommandSentTotal.WithLabelValues("failure", string(cmd.Spec.Command)).Inc()
+		metrics.CommandSentTotal.WithLabelValues("failure", string(cmd.Spec.Method)).Inc()
 		// Return error to trigger exponential backoff requeue by controller-runtime
 		return ctrl.Result{}, err
 	}
@@ -59,14 +59,14 @@ func (s *SenderReconciler) Reconcile(ctx context.Context, cmd *iovv1alpha1.Vehic
 	// 4. Handle Hub Rejection
 	if !resp.Accepted {
 		logger.Info("Hub rejected the command", "reason", resp.Message)
-		metrics.CommandSentTotal.WithLabelValues("rejected", string(cmd.Spec.Command)).Inc()
+		metrics.CommandSentTotal.WithLabelValues("rejected", string(cmd.Spec.Method)).Inc()
 		MarkFailed(cmd, fmt.Sprintf("Hub rejected: %s", resp.Message))
 		return ctrl.Result{}, nil
 	}
 
 	// 5. Handle Success
 	logger.Info("Command successfully sent to Hub", "hubMessage", resp.Message)
-	metrics.CommandSentTotal.WithLabelValues("success", string(cmd.Spec.Command)).Inc()
+	metrics.CommandSentTotal.WithLabelValues("success", string(cmd.Spec.Method)).Inc()
 	MarkSent(cmd, "Command successfully forwarded to Hub")
 
 	// This is strictly "Sent", not yet "Acknowledged" by the vehicle agent.

@@ -17,19 +17,19 @@
 
 假设我们要创建的 CRD 是：
 - **Group:** `iov.cloupeer.io`
-- **Version:** `v1alpha1`
+- **Version:** `v1alpha2`
 - **Kind:** `Vehicle`
 
 #### 1.1 创建 groupversion_info.go
 
 这个文件用于向 `controller-runtime` 注册你的 API Group 和 Version。
 
-创建文件：`pkg/apis/iov/v1alpha1/groupversion_info.go`
+创建文件：`pkg/apis/iov/v1alpha2/groupversion_info.go`
 
 ```go
 // +k8s:deepcopy-gen=package
 // +groupName=iov.cloupeer.io
-package v1alpha1
+package v1alpha2
 
 import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -38,7 +38,7 @@ import (
 
 var (
 	// GroupVersion is group version used to register these objects
-	GroupVersion = schema.GroupVersion{Group: "iov.cloupeer.io", Version: "v1alpha1"}
+	GroupVersion = schema.GroupVersion{Group: "iov.cloupeer.io", Version: "v1alpha2"}
 
 	// SchemeBuilder is used to add go types to the GroupVersionKind scheme
 	SchemeBuilder = &scheme.Builder{GroupVersion: GroupVersion}
@@ -52,10 +52,10 @@ var (
 
 这个文件是核心，用于定义 CRD 的 `Spec`（期望状态）和 `Status`（实际状态），以及 `Kind` 和 `List` 结构体。
 
-创建文件：`pkg/apis/iov/v1alpha1/vehicle_types.go`
+创建文件：`pkg/apis/iov/v1alpha2/vehicle_types.go`
 
 ```go
-package v1alpha1
+package v1alpha2
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -124,7 +124,7 @@ make manifests generate
 
 这个命令会触发 `hack/make-rules/generate.sh` 脚本，并完成以下所有工作：
 
-1.  **生成 DeepCopy 方法：** 在你的 `v1alpha1` 目录下创建一个 `zz_generated.deepcopy.go` 文件。你的 API 类型必须实现 `runtime.Object` 接口，这些方法是必需的。
+1.  **生成 DeepCopy 方法：** 在你的 `v1alpha2` 目录下创建一个 `zz_generated.deepcopy.go` 文件。你的 API 类型必须实现 `runtime.Object` 接口，这些方法是必需的。
 2.  **生成 CRD 清单：** 在 `manifests/base/crd/bases/` 目录下生成 `xxx.cloupeer.io_xxxxxxx.yaml` 文件。
 3.  **更新 Kustomization：** 自动将新生成的 CRD 文件名添加到 `manifests/base/crd/bases/kustomization.yaml` 中。
 

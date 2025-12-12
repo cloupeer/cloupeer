@@ -1,4 +1,4 @@
-apiVersion: iov.cloupeer.io/v1alpha1
+apiVersion: iov.cloupeer.io/v1alpha2
 kind: Vehicle
 metadata:
   name: mock-vh-1764908080-1

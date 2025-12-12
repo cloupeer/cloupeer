@@ -13,7 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	iovv1alpha1 "cloupeer.io/cloupeer/pkg/apis/iov/v1alpha1"
+	iovv1alpha2 "cloupeer.io/cloupeer/pkg/apis/iov/v1alpha2"
 )
 
 // Reconciler reconciles a VehicleCommand object
@@ -55,7 +55,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	logger := log.FromContext(ctx)
 
 	// 1. Fetch the VehicleCommand
-	var cmd iovv1alpha1.VehicleCommand
+	var cmd iovv1alpha2.VehicleCommand
 	if err := r.Get(ctx, req.NamespacedName, &cmd); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
@@ -69,7 +69,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	// This ensures the object has a valid Phase before entering SubReconcilers
 	if cmd.Status.Phase == "" {
 		logger.Info("Initializing VehicleCommand status")
-		cmd.Status.Phase = iovv1alpha1.CommandPhasePending
+		cmd.Status.Phase = iovv1alpha2.CommandPhasePending
 		cmd.Status.Message = "Command created, waiting to be sent"
 		if err := r.Status().Update(ctx, &cmd); err != nil {
 			logger.Error(err, "Failed to initialize status")
@@ -143,6 +143,6 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 	}
 
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&iovv1alpha1.VehicleCommand{}).
+		For(&iovv1alpha2.VehicleCommand{}).
 		Complete(r)
 }

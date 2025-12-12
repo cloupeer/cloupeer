@@ -9,7 +9,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"cloupeer.io/cloupeer/internal/cloudhub/core/model"
-	"cloupeer.io/cloupeer/pkg/apis/iov/v1alpha1"
+	iovv1alpha2 "cloupeer.io/cloupeer/pkg/apis/iov/v1alpha2"
 	"cloupeer.io/cloupeer/pkg/log"
 )
 
@@ -111,15 +111,15 @@ func (p *StatusPipeline) patchStatus(ctx context.Context, id string, update *mod
 	// We only want to touch specific fields in .status
 	// structure: {"status": {"online": true, "lastSeenTime": "..."}}
 	patchMap := map[string]any{
-		"apiVersion": "iov.cloupeer.io/v1alpha1",
+		"apiVersion": "iov.cloupeer.io/v1alpha2",
 		"kind":       "Vehicle",
 		"metadata": map[string]any{
 			"name":      id,
 			"namespace": p.namespace,
 		},
 		"status": map[string]any{
-			"online":       update.Online,
-			"lastSeenTime": update.LastSeen, // 确保这里序列化符合 RFC3339
+			"online":            update.Online,
+			"lastHeartbeatTime": update.LastHeartbeatTime, // 确保这里序列化符合 RFC3339
 			// "reportedFirmwareVersion": update.FirmwareVersion,
 		},
 	}
@@ -131,7 +131,7 @@ func (p *StatusPipeline) patchStatus(ctx context.Context, id string, update *mod
 
 	// Use generic client to Patch.
 	// Note: We use MergePatchType on the Status subresource.
-	obj := &v1alpha1.Vehicle{}
+	obj := &iovv1alpha2.Vehicle{}
 	obj.SetName(id)
 	obj.SetNamespace(p.namespace)
 

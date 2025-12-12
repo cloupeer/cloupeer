@@ -8,17 +8,14 @@ type Vehicle struct {
 	// ID is the unique identifier of the vehicle (corresponds to K8s metadata.name).
 	ID string
 
-	// FirmwareVersion is the version currently reported by the vehicle.
-	FirmwareVersion string
-
-	// Description is a human-readable description.
-	Description string
+	// ReportedVersion is the version currently reported by the vehicle.
+	ReportedVersion string
 
 	// Online indicates if the vehicle is currently connected to CloudHub.
 	Online bool
 
-	// LastSeen is the timestamp when the vehicle last communicated.
-	LastSeen time.Time
+	// LastHeartbeatTime is the timestamp when the vehicle last communicated.
+	LastHeartbeatTime time.Time
 
 	// DesiredVersion is the target version we want the vehicle to upgrade to.
 	// This comes from the Spec.
@@ -30,7 +27,7 @@ type Vehicle struct {
 // VehicleStatusUpdate represents a partial update to the vehicle's status.
 // Used for high-frequency updates (e.g. heartbeat) to avoid fetching the full object.
 type VehicleStatusUpdate struct {
-	ID       string
-	Online   bool
-	LastSeen time.Time
+	ID                string
+	Online            bool
+	LastHeartbeatTime time.Time
 }

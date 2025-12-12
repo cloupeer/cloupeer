@@ -7,24 +7,23 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"cloupeer.io/cloupeer/internal/cloudhub/core/model"
-	iovv1 "cloupeer.io/cloupeer/pkg/apis/iov/v1alpha1"
+	iovv1alpha2 "cloupeer.io/cloupeer/pkg/apis/iov/v1alpha2"
 )
 
 // ToModel converts a K8s CRD object to a Core Model entity.
-func ToModel(crd *iovv1.Vehicle) *model.Vehicle {
+func ToModel(crd *iovv1alpha2.Vehicle) *model.Vehicle {
 	return &model.Vehicle{
-		ID:              crd.Name, // Map K8s Name to Model ID
-		FirmwareVersion: crd.Status.ReportedFirmwareVersion,
-		Description:     crd.Spec.Description,
-		Online:          crd.Status.Online,
-		LastSeen:        extractTime(crd.Status.LastSeenTime),
-		DesiredVersion:  crd.Spec.FirmwareVersion,
+		ID:                crd.Name, // Map K8s Name to Model ID
+		ReportedVersion:   crd.Status.Profile.Firmware.Version,
+		Online:            crd.Status.Online,
+		LastHeartbeatTime: extractTime(crd.Status.LastHeartbeatTime),
+		DesiredVersion:    crd.Spec.Profile.Firmware.Version,
 	}
 }
 
 // ToCRD converts a Core Model entity to a K8s CRD object (for creation).
-func ToCRD(ns string, v *model.Vehicle) *iovv1.Vehicle {
-	return &iovv1.Vehicle{
+func ToCRD(ns string, v *model.Vehicle) *iovv1alpha2.Vehicle {
+	return &iovv1alpha2.Vehicle{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      v.ID,
 			Namespace: ns,
@@ -33,14 +32,22 @@ func ToCRD(ns string, v *model.Vehicle) *iovv1.Vehicle {
 				"iov.cloupeer.io/auto-discovered": strconv.FormatBool(v.IsRegister),
 			},
 		},
-		Spec: iovv1.VehicleSpec{
-			Description:     v.Description,
-			FirmwareVersion: v.DesiredVersion,
+		Spec: iovv1alpha2.VehicleSpec{
+			VIN: "",
+			Profile: iovv1alpha2.VehicleProfile{
+				Firmware: iovv1alpha2.FirmwareConfig{
+					Version: v.DesiredVersion,
+				},
+			},
 		},
-		Status: iovv1.VehicleStatus{
-			Online:                  v.Online,
-			ReportedFirmwareVersion: v.FirmwareVersion,
-			LastSeenTime:            toMetaTime(v.LastSeen),
+		Status: iovv1alpha2.VehicleStatus{
+			Online: v.Online,
+			Profile: iovv1alpha2.VehicleProfile{
+				Firmware: iovv1alpha2.FirmwareConfig{
+					Version: v.ReportedVersion,
+				},
+			},
+			LastHeartbeatTime: toMetaTime(v.LastHeartbeatTime),
 		},
 	}
 }

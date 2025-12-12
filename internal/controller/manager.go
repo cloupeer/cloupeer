@@ -14,7 +14,7 @@ import (
 
 	"cloupeer.io/cloupeer/internal/controller/vehicle"
 	"cloupeer.io/cloupeer/internal/controller/vehiclecommand"
-	iovv1alpha1 "cloupeer.io/cloupeer/pkg/apis/iov/v1alpha1"
+	iovv1alpha2 "cloupeer.io/cloupeer/pkg/apis/iov/v1alpha2"
 	"cloupeer.io/cloupeer/pkg/log"
 )
 
@@ -22,7 +22,7 @@ var cloupeerScheme = runtime.NewScheme()
 
 func init() {
 	utilruntime.Must(scheme.AddToScheme(cloupeerScheme))
-	utilruntime.Must(iovv1alpha1.AddToScheme(cloupeerScheme))
+	utilruntime.Must(iovv1alpha2.AddToScheme(cloupeerScheme))
 }
 
 type Controller interface {

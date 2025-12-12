@@ -5,7 +5,7 @@ import (
 
 	ctrl "sigs.k8s.io/controller-runtime"
 
-	iovv1alpha1 "cloupeer.io/cloupeer/pkg/apis/iov/v1alpha1"
+	iovv1alpha2 "cloupeer.io/cloupeer/pkg/apis/iov/v1alpha2"
 )
 
 // SubReconciler defines the interface for a modular reconciliation step.
@@ -25,5 +25,5 @@ type SubReconciler interface {
 	// the function should simply return (ctrl.Result{}, nil). The main
 	// loop will detect the status change and its subsequent Patch
 	// will trigger the new reconcile event.
-	Reconcile(ctx context.Context, v *iovv1alpha1.Vehicle) (ctrl.Result, error)
+	Reconcile(ctx context.Context, v *iovv1alpha2.Vehicle) (ctrl.Result, error)
 }

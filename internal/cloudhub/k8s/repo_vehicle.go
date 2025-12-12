@@ -12,7 +12,7 @@ import (
 
 	"cloupeer.io/cloupeer/internal/cloudhub/core/model"
 	"cloupeer.io/cloupeer/internal/pkg/util"
-	"cloupeer.io/cloupeer/pkg/apis/iov/v1alpha1"
+	iovv1alpha2 "cloupeer.io/cloupeer/pkg/apis/iov/v1alpha2"
 )
 
 type vehicleRepository struct {
@@ -26,7 +26,7 @@ func newVehicleRepository(ns string, c client.Client, p *StatusPipeline) *vehicl
 }
 
 func (r *vehicleRepository) Get(ctx context.Context, id string) (*model.Vehicle, error) {
-	crd := &v1alpha1.Vehicle{}
+	crd := &iovv1alpha2.Vehicle{}
 	key := types.NamespacedName{Name: id, Namespace: "default"}
 
 	if err := r.client.Get(ctx, key, crd); err != nil {
@@ -52,7 +52,7 @@ func (r *vehicleRepository) Create(ctx context.Context, v *model.Vehicle) error 
 }
 
 func (r *vehicleRepository) UpdateStatus(ctx context.Context, v *model.Vehicle) error {
-	crd := &v1alpha1.Vehicle{}
+	crd := &iovv1alpha2.Vehicle{}
 	key := types.NamespacedName{Name: v.ID, Namespace: r.namespace}
 	if err := r.client.Get(ctx, key, crd); err != nil {
 		return fmt.Errorf("failed to get vehicle for status update: %w", err)
@@ -60,26 +60,26 @@ func (r *vehicleRepository) UpdateStatus(ctx context.Context, v *model.Vehicle) 
 
 	now := metav1.Now()
 	crd.Status.Online = v.Online
-	crd.Status.ReportedFirmwareVersion = v.FirmwareVersion
-	if !v.LastSeen.IsZero() {
-		crd.Status.LastSeenTime = &now // 简单起见用当前时间，或转换 v.LastSeen
+	crd.Status.Profile.Firmware.Version = v.ReportedVersion
+	if !v.LastHeartbeatTime.IsZero() {
+		crd.Status.LastHeartbeatTime = &now
 	}
 
 	if v.IsRegister {
-		crd.Status.Phase = v1alpha1.VehiclePhaseIdle
+		crd.Status.UpgradeStatus.Phase = iovv1alpha2.VehiclePhaseIdle
 		crd.Status.Conditions = []metav1.Condition{
 			{
-				Type:               v1alpha1.ConditionTypeReady,
+				Type:               iovv1alpha2.ConditionTypeReady,
 				Status:             metav1.ConditionTrue,
 				Reason:             "AutoRegistered", // 翻译结果
 				Message:            "Vehicle initialized via CloudHub registration",
 				LastTransitionTime: now,
 			},
 			{
-				Type:               v1alpha1.ConditionTypeSynced,
+				Type:               iovv1alpha2.ConditionTypeSynced,
 				Status:             metav1.ConditionTrue,
 				Reason:             "InitialSync",
-				Message:            fmt.Sprintf("Reported version: %s", v.FirmwareVersion),
+				Message:            fmt.Sprintf("Reported version: %s", v.ReportedVersion),
 				LastTransitionTime: now,
 			},
 		}

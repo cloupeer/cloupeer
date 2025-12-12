@@ -13,7 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	iovv1alpha1 "cloupeer.io/cloupeer/pkg/apis/iov/v1alpha1"
+	iovv1alpha2 "cloupeer.io/cloupeer/pkg/apis/iov/v1alpha2"
 )
 
 type Reconciler struct {
@@ -67,7 +67,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	logger.Info("Starting reconcile cycle...")
 
 	// Fetch the Vehicle resource
-	var vehicle iovv1alpha1.Vehicle
+	var vehicle iovv1alpha2.Vehicle
 	if err := r.Get(ctx, req.NamespacedName, &vehicle); err != nil {
 		// We use client.IgnoreNotFound(err) to gracefully handle
 		// deletion events. When a resource is deleted, a reconcile is
@@ -92,8 +92,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	originalVehicle := vehicle.DeepCopy()
 
 	// 【Hack】Force patch generation for RetryCount=0.
-	if originalVehicle.Status.RetryCount == 0 {
-		originalVehicle.Status.RetryCount = -1
+	if originalVehicle.Status.UpgradeStatus.RetryCount == 0 {
+		originalVehicle.Status.UpgradeStatus.RetryCount = -1
 	}
 
 	// Handle Finalizer logic
@@ -102,7 +102,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	// --- The object is NOT being deleted ---
-	if !controllerutil.ContainsFinalizer(&vehicle, iovv1alpha1.VehicleFinalizer) {
+	if !controllerutil.ContainsFinalizer(&vehicle, iovv1alpha2.VehicleFinalizer) {
 		return r.addFinalizer(ctx, logger, &vehicle, originalVehicle)
 	}
 
@@ -146,8 +146,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	// This is the critical check to prevent infinite reconciliation loops.
 	// If the status has not changed, we DO NOT patch.
 	if !equality.Semantic.DeepEqual(originalVehicle.Status, vehicle.Status) {
-		oldPhase := originalVehicle.Status.Phase
-		newPhase := vehicle.Status.Phase
+		oldPhase := originalVehicle.Status.UpgradeStatus.Phase
+		newPhase := vehicle.Status.UpgradeStatus.Phase
 		logger.Info("Patching Vehicle Status", "oldPhase", oldPhase, "newPhase", newPhase)
 
 		if err := r.Status().Patch(ctx, &vehicle, client.MergeFrom(originalVehicle)); err != nil {
@@ -165,9 +165,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	return aggregatedResult, nil
 }
 
-func (r *Reconciler) handleVehicleDeletion(ctx context.Context, logger logr.Logger, vehicle, originalVehicle *iovv1alpha1.Vehicle) (ctrl.Result, error) {
+func (r *Reconciler) handleVehicleDeletion(ctx context.Context, logger logr.Logger, vehicle, originalVehicle *iovv1alpha2.Vehicle) (ctrl.Result, error) {
 	// --- The object is being deleted ---
-	if controllerutil.ContainsFinalizer(vehicle, iovv1alpha1.VehicleFinalizer) {
+	if controllerutil.ContainsFinalizer(vehicle, iovv1alpha2.VehicleFinalizer) {
 		logger.Info("Handling Finalizer: Deletion detected, running cleanup logic...")
 
 		// Execute our cleanup logic
@@ -180,7 +180,7 @@ func (r *Reconciler) handleVehicleDeletion(ctx context.Context, logger logr.Logg
 
 		// Cleanup successful, remove the Finalizer
 		logger.Info("Cleanup successful, removing Finalizer.")
-		controllerutil.RemoveFinalizer(vehicle, iovv1alpha1.VehicleFinalizer)
+		controllerutil.RemoveFinalizer(vehicle, iovv1alpha2.VehicleFinalizer)
 
 		// Patch the object to remove the finalizer
 		// We use the originalVehicle from the start of the reconcile
@@ -197,9 +197,9 @@ func (r *Reconciler) handleVehicleDeletion(ctx context.Context, logger logr.Logg
 	return ctrl.Result{}, nil
 }
 
-func (r *Reconciler) addFinalizer(ctx context.Context, logger logr.Logger, vehicle, originalVehicle *iovv1alpha1.Vehicle) (ctrl.Result, error) {
+func (r *Reconciler) addFinalizer(ctx context.Context, logger logr.Logger, vehicle, originalVehicle *iovv1alpha2.Vehicle) (ctrl.Result, error) {
 	logger.Info("Adding Finalizer to new/updated Vehicle.")
-	controllerutil.AddFinalizer(vehicle, iovv1alpha1.VehicleFinalizer)
+	controllerutil.AddFinalizer(vehicle, iovv1alpha2.VehicleFinalizer)
 
 	// Patch the object to add the finalizer
 	if err := r.Patch(ctx, vehicle, client.MergeFrom(originalVehicle)); err != nil {
@@ -215,7 +215,7 @@ func (r *Reconciler) addFinalizer(ctx context.Context, logger logr.Logger, vehic
 
 // clearVehicle contains the business logic required to clean up
 // before a Vehicle resource is deleted.
-func (r *Reconciler) clearVehicle(ctx context.Context, v *iovv1alpha1.Vehicle) error {
+func (r *Reconciler) clearVehicle(ctx context.Context, v *iovv1alpha2.Vehicle) error {
 	logger := log.FromContext(ctx)
 
 	// --- Simulate cleanup logic ---
@@ -239,7 +239,7 @@ func (r *Reconciler) clearVehicle(ctx context.Context, v *iovv1alpha1.Vehicle) e
 
 func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&iovv1alpha1.Vehicle{}).
-		Owns(&iovv1alpha1.VehicleCommand{}).
+		For(&iovv1alpha2.Vehicle{}).
+		Owns(&iovv1alpha2.VehicleCommand{}).
 		Complete(r)
 }

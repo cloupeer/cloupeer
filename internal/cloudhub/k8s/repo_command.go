@@ -8,7 +8,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"cloupeer.io/cloupeer/internal/cloudhub/core/model"
-	"cloupeer.io/cloupeer/pkg/apis/iov/v1alpha1"
+	iovv1alpha2 "cloupeer.io/cloupeer/pkg/apis/iov/v1alpha2"
 )
 
 type commandRepository struct {
@@ -41,7 +41,7 @@ func (r *commandRepository) UpdateStatus(ctx context.Context, cmdID string, stat
 		return err
 	}
 
-	obj := &v1alpha1.VehicleCommand{}
+	obj := &iovv1alpha2.VehicleCommand{}
 	obj.SetName(cmdID)
 	obj.SetNamespace(r.namespace)
 
