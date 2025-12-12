@@ -25,9 +25,9 @@ func newVehicleRepository(ns string, c client.Client, p *StatusPipeline) *vehicl
 	return &vehicleRepository{namespace: ns, client: c, pipeline: p}
 }
 
-func (r *vehicleRepository) Get(ctx context.Context, id string) (*model.Vehicle, error) {
+func (r *vehicleRepository) Get(ctx context.Context, vin string) (*model.Vehicle, error) {
 	crd := &iovv1alpha2.Vehicle{}
-	key := types.NamespacedName{Name: id, Namespace: "default"}
+	key := types.NamespacedName{Name: vinToMetaName(vin), Namespace: r.namespace}
 
 	if err := r.client.Get(ctx, key, crd); err != nil {
 		if apierrors.IsNotFound(err) {
@@ -53,7 +53,7 @@ func (r *vehicleRepository) Create(ctx context.Context, v *model.Vehicle) error 
 
 func (r *vehicleRepository) UpdateStatus(ctx context.Context, v *model.Vehicle) error {
 	crd := &iovv1alpha2.Vehicle{}
-	key := types.NamespacedName{Name: v.ID, Namespace: r.namespace}
+	key := types.NamespacedName{Name: vinToMetaName(v.VIN), Namespace: r.namespace}
 	if err := r.client.Get(ctx, key, crd); err != nil {
 		return fmt.Errorf("failed to get vehicle for status update: %w", err)
 	}
@@ -65,27 +65,6 @@ func (r *vehicleRepository) UpdateStatus(ctx context.Context, v *model.Vehicle) 
 		crd.Status.LastHeartbeatTime = &now
 	}
 
-	if v.IsRegister {
-		crd.Status.UpgradeStatus.Phase = iovv1alpha2.VehiclePhaseIdle
-		crd.Status.Conditions = []metav1.Condition{
-			{
-				Type:               iovv1alpha2.ConditionTypeReady,
-				Status:             metav1.ConditionTrue,
-				Reason:             "AutoRegistered", // 翻译结果
-				Message:            "Vehicle initialized via CloudHub registration",
-				LastTransitionTime: now,
-			},
-			{
-				Type:               iovv1alpha2.ConditionTypeSynced,
-				Status:             metav1.ConditionTrue,
-				Reason:             "InitialSync",
-				Message:            fmt.Sprintf("Reported version: %s", v.ReportedVersion),
-				LastTransitionTime: now,
-			},
-		}
-	}
-
-	// 4. 执行更新
 	if err := r.client.Status().Update(ctx, crd); err != nil {
 		return fmt.Errorf("failed to init status: %w", err)
 	}

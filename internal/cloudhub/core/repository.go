@@ -14,8 +14,8 @@ type Repository interface {
 // VehicleRepository defines the interface for interacting with vehicle persistent data.
 // In Cloupeer, this is implemented by the K8s Adapter.
 type VehicleRepository interface {
-	// Get retrieves a vehicle by its ID.
-	Get(ctx context.Context, id string) (*model.Vehicle, error)
+	// Get retrieves a vehicle by its VIN.
+	Get(ctx context.Context, vin string) (*model.Vehicle, error)
 
 	// Create registers a new vehicle in the system.
 	Create(ctx context.Context, vehicle *model.Vehicle) error

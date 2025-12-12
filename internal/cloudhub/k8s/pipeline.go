@@ -54,7 +54,7 @@ func (p *StatusPipeline) Start(ctx context.Context) {
 		case update := <-p.inputCh:
 			// MERGE STRATEGY: Last Write Wins (in memory)
 			// We only keep the latest update for each vehicle in the buffer map.
-			p.buffer[update.ID] = update
+			p.buffer[update.VIN] = update
 
 			// Optimization: If buffer gets too large, force flush immediately
 			if len(p.buffer) >= 1000 {
@@ -83,7 +83,7 @@ func (p *StatusPipeline) Push(update *model.VehicleStatusUpdate) {
 	default:
 		// Buffer full: Drop the heartbeat to protect the system (Load Shedding).
 		// For status updates, dropping a frame is better than crashing OOM.
-		log.Warn("Status pipeline full! Dropping update for vehicle: %s", update.ID)
+		log.Warn("Status pipeline full! Dropping update for vehicle: %s", update.VIN)
 	}
 }
 
@@ -92,9 +92,9 @@ func (p *StatusPipeline) Push(update *model.VehicleStatusUpdate) {
 // We still have to make N requests, BUT we saved M (M >> N) redundant requests via merging.
 func (p *StatusPipeline) flush(ctx context.Context) {
 	count := 0
-	for id, update := range p.buffer {
-		if err := p.patchStatus(ctx, id, update); err != nil {
-			log.Error(err, "Failed to patch vehicle status", "id", id)
+	for vin, update := range p.buffer {
+		if err := p.patchStatus(ctx, vin, update); err != nil {
+			log.Error(err, "Failed to patch vehicle status", "vin", vin)
 		}
 		count++
 	}
@@ -106,7 +106,7 @@ func (p *StatusPipeline) flush(ctx context.Context) {
 }
 
 // patchStatus performs a lightweight MergePatch on the Status subresource.
-func (p *StatusPipeline) patchStatus(ctx context.Context, id string, update *model.VehicleStatusUpdate) error {
+func (p *StatusPipeline) patchStatus(ctx context.Context, vin string, update *model.VehicleStatusUpdate) error {
 	// Construct a raw JSON patch for efficiency.
 	// We only want to touch specific fields in .status
 	// structure: {"status": {"online": true, "lastSeenTime": "..."}}
@@ -114,7 +114,7 @@ func (p *StatusPipeline) patchStatus(ctx context.Context, id string, update *mod
 		"apiVersion": "iov.cloupeer.io/v1alpha2",
 		"kind":       "Vehicle",
 		"metadata": map[string]any{
-			"name":      id,
+			"name":      vinToMetaName(vin),
 			"namespace": p.namespace,
 		},
 		"status": map[string]any{
@@ -132,7 +132,7 @@ func (p *StatusPipeline) patchStatus(ctx context.Context, id string, update *mod
 	// Use generic client to Patch.
 	// Note: We use MergePatchType on the Status subresource.
 	obj := &iovv1alpha2.Vehicle{}
-	obj.SetName(id)
+	obj.SetName(vinToMetaName(vin))
 	obj.SetNamespace(p.namespace)
 
 	patch := client.RawPatch(types.ApplyPatchType, patchData)

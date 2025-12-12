@@ -2,6 +2,7 @@ package k8s
 
 import (
 	"strconv"
+	"strings"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -13,7 +14,7 @@ import (
 // ToModel converts a K8s CRD object to a Core Model entity.
 func ToModel(crd *iovv1alpha2.Vehicle) *model.Vehicle {
 	return &model.Vehicle{
-		ID:                crd.Name, // Map K8s Name to Model ID
+		VIN:               crd.Spec.VIN,
 		ReportedVersion:   crd.Status.Profile.Firmware.Version,
 		Online:            crd.Status.Online,
 		LastHeartbeatTime: extractTime(crd.Status.LastHeartbeatTime),
@@ -25,7 +26,7 @@ func ToModel(crd *iovv1alpha2.Vehicle) *model.Vehicle {
 func ToCRD(ns string, v *model.Vehicle) *iovv1alpha2.Vehicle {
 	return &iovv1alpha2.Vehicle{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      v.ID,
+			Name:      vinToMetaName(v.VIN),
 			Namespace: ns,
 			Labels: map[string]string{
 				"app.kubernetes.io/managed-by":    "cpeer-hub",
@@ -33,7 +34,7 @@ func ToCRD(ns string, v *model.Vehicle) *iovv1alpha2.Vehicle {
 			},
 		},
 		Spec: iovv1alpha2.VehicleSpec{
-			VIN: "",
+			VIN: v.VIN,
 			Profile: iovv1alpha2.VehicleProfile{
 				Firmware: iovv1alpha2.FirmwareConfig{
 					Version: v.DesiredVersion,
@@ -50,6 +51,10 @@ func ToCRD(ns string, v *model.Vehicle) *iovv1alpha2.Vehicle {
 			LastHeartbeatTime: toMetaTime(v.LastHeartbeatTime),
 		},
 	}
+}
+
+func vinToMetaName(vin string) string {
+	return strings.ToLower(vin)
 }
 
 // Helper functions for time conversion

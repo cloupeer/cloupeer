@@ -21,7 +21,7 @@ func (s *Service) RegisterVehicle(ctx context.Context, v *model.Vehicle) error {
 	v.LastHeartbeatTime = time.Now()
 
 	// Check existence
-	existing, err := s.vehicle.Get(ctx, v.ID)
+	existing, err := s.vehicle.Get(ctx, v.VIN)
 	if err != nil {
 		if errors.Is(err, util.ErrNotFound) {
 			// Create new vehicle
@@ -46,7 +46,7 @@ func (s *Service) RegisterVehicle(ctx context.Context, v *model.Vehicle) error {
 // This is a high-frequency operation.
 func (s *Service) UpdateOnlineStatus(ctx context.Context, vehicleID string, online bool) error {
 	update := &model.VehicleStatusUpdate{
-		ID:                vehicleID,
+		VIN:               vehicleID,
 		Online:            online,
 		LastHeartbeatTime: time.Now(),
 	}

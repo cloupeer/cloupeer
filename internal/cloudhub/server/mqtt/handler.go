@@ -20,15 +20,15 @@ func (s *Server) handleRegister(ctx context.Context, req *pb.RegisterVehicleRequ
 	log.Info("Received register request", "vehicleID", req.VehicleId, "version", req.FirmwareVersion)
 
 	v := &model.Vehicle{
-		ID:              req.VehicleId,
+		VIN:             req.VehicleId,
 		ReportedVersion: req.FirmwareVersion,
 		IsRegister:      true,
 	}
 
 	if err := s.svc.RegisterVehicle(ctx, v); err != nil {
-		log.Error(err, "Failed to register vehicle", "id", v.ID)
+		log.Error(err, "Failed to register vehicle", "id", v.VIN)
 	} else {
-		log.Info("Vehicle registered successfully", "id", v.ID)
+		log.Info("Vehicle registered successfully", "id", v.VIN)
 	}
 
 	return nil

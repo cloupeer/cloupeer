@@ -5,8 +5,9 @@ import "time"
 // Vehicle represents the core business entity of a connected vehicle.
 // It is decoupled from Kubernetes CRD definitions to maintain clean architecture.
 type Vehicle struct {
-	// ID is the unique identifier of the vehicle (corresponds to K8s metadata.name).
-	ID string
+	// VIN is the 17-character physical identifier.
+	// This maps to Spec.VIN in the CRD.
+	VIN string
 
 	// ReportedVersion is the version currently reported by the vehicle.
 	ReportedVersion string
@@ -27,7 +28,7 @@ type Vehicle struct {
 // VehicleStatusUpdate represents a partial update to the vehicle's status.
 // Used for high-frequency updates (e.g. heartbeat) to avoid fetching the full object.
 type VehicleStatusUpdate struct {
-	ID                string
+	VIN               string
 	Online            bool
 	LastHeartbeatTime time.Time
 }

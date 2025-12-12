@@ -34,7 +34,8 @@ func NewHAL() core.HAL {
 	if vid == "" {
 		mu.Lock()
 		count++
-		vid = fmt.Sprintf("mock-vh-%d-%d", time.Now().Unix(), count)
+		timestampPart := fmt.Sprintf("%08d", time.Now().Unix()%100000000)
+		vid = fmt.Sprintf("MVH%s%06d", timestampPart, count)
 		mu.Unlock()
 	}
 
