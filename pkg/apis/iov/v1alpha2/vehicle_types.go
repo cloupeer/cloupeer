@@ -8,6 +8,24 @@ import (
 // VehicleFinalizer allows the controller to clean up resources (e.g. remove from EMQX authentication) before deletion.
 const VehicleFinalizer = "iov.cloupeer.io/vehicle-finalizer"
 
+// VehicleLifecycle defines the administrative intent for the vehicle's existence.
+// +kubebuilder:validation:Enum=Inventory;Active;Retired
+type VehicleLifecycle string
+
+const (
+	// VehicleLifecycleInventory means the vehicle is manufactured but not yet delivered.
+	// Infrastructure limits bandwidth and features.
+	VehicleLifecycleInventory VehicleLifecycle = "Inventory"
+
+	// VehicleLifecycleActive means the vehicle is fully operational and user-bound.
+	// This is the default state for a working vehicle.
+	VehicleLifecycleActive VehicleLifecycle = "Active"
+
+	// VehicleLifecycleRetired means the vehicle is permanently decommissioned.
+	// The controller should revoke access credentials and stop processing data.
+	VehicleLifecycleRetired VehicleLifecycle = "Retired"
+)
+
 // VehicleSpec defines the desired state of Vehicle.
 // It focuses on high-level configuration and desired properties (Twins).
 type VehicleSpec struct {
@@ -15,6 +33,13 @@ type VehicleSpec struct {
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:Pattern=`^[A-HJ-NPR-Z0-9]{17}$`
 	VIN string `json:"vin"`
+
+	// Lifecycle describes the administrative business state of the vehicle.
+	// It drives the infrastructure access control (e.g. revoke certs if Retired).
+	// Defaults to "Active" if not specified.
+	// +optional
+	// +kubebuilder:default="Active"
+	Lifecycle VehicleLifecycle `json:"lifecycle,omitempty"`
 
 	// VehicleModelRef references the definition of the vehicle model (e.g., "tesla-model-3-v1").
 	// This allows future validation of supported properties.

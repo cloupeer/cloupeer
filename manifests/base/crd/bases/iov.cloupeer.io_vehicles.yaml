@@ -248,6 +248,17 @@ spec:
                       If empty, defaults to the Kubernetes metadata.name.
                     type: string
                 type: object
+              lifecycle:
+                default: Active
+                description: |-
+                  Lifecycle describes the administrative business state of the vehicle.
+                  It drives the infrastructure access control (e.g. revoke certs if Retired).
+                  Defaults to "Active" if not specified.
+                enum:
+                - Inventory
+                - Active
+                - Retired
+                type: string
               profile:
                 description: |-
                   Profile defines the core operational configuration of the vehicle.
