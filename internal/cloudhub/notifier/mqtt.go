@@ -4,11 +4,11 @@ import (
 	"context"
 	"encoding/json"
 
-	pb "cloupeer.io/cloupeer/api/proto/v1"
-	"cloupeer.io/cloupeer/internal/cloudhub/core/model"
-	"cloupeer.io/cloupeer/internal/pkg/mqtt/paths"
-	pkgmqtt "cloupeer.io/cloupeer/pkg/mqtt"
-	"cloupeer.io/cloupeer/pkg/mqtt/topic"
+	pb "github.com/autopeer-io/autopeer/api/proto/v1"
+	"github.com/autopeer-io/autopeer/internal/cloudhub/core/model"
+	"github.com/autopeer-io/autopeer/internal/pkg/mqtt/paths"
+	pkgmqtt "github.com/autopeer-io/autopeer/pkg/mqtt"
+	"github.com/autopeer-io/autopeer/pkg/mqtt/topic"
 )
 
 type MQTTNotifier struct {

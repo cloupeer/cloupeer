@@ -7,8 +7,8 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"cloupeer.io/cloupeer/internal/cloudhub/core/model"
-	iovv1alpha2 "cloupeer.io/cloupeer/pkg/apis/iov/v1alpha2"
+	"github.com/autopeer-io/autopeer/internal/cloudhub/core/model"
+	iovv1alpha2 "github.com/autopeer-io/autopeer/pkg/apis/iov/v1alpha2"
 )
 
 // ToModel converts a K8s CRD object to a Core Model entity.
@@ -30,7 +30,7 @@ func ToCRD(ns string, v *model.Vehicle) *iovv1alpha2.Vehicle {
 			Namespace: ns,
 			Labels: map[string]string{
 				"app.kubernetes.io/managed-by":    "cpeer-hub",
-				"iov.cloupeer.io/auto-discovered": strconv.FormatBool(v.IsRegister),
+				"iov.autopeer.io/auto-discovered": strconv.FormatBool(v.IsRegister),
 			},
 		},
 		Spec: iovv1alpha2.VehicleSpec{

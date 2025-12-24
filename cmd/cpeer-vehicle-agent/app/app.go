@@ -5,13 +5,13 @@ import (
 
 	genericapiserver "k8s.io/apiserver/pkg/server"
 
-	"cloupeer.io/cloupeer/cmd/cpeer-vehicle-agent/app/options"
-	"cloupeer.io/cloupeer/pkg/app"
+	"github.com/autopeer-io/autopeer/cmd/cpeer-vehicle-agent/app/options"
+	"github.com/autopeer-io/autopeer/pkg/app"
 )
 
 const (
 	commandName = "cpeer-edge-agent"
-	commandDesc = `The Cloupeer Edge Agent runs on edge, reporting its status to the
+	commandDesc = `The Autopeer Edge Agent runs on edge, reporting its status to the
 cpeer-hub and executing tasks such as firmware upgrades.`
 )
 
@@ -19,7 +19,7 @@ func NewApp() *app.App {
 	opts := options.NewAgentOptions()
 	application := app.NewApp(
 		commandName,
-		"Launch a Cloupeer edge agent",
+		"Launch a Autopeer edge agent",
 		app.WithDescription(commandDesc),
 		app.WithOptions(opts),
 		app.WithDefaultValidArgs(),

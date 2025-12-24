@@ -8,9 +8,9 @@ import (
 	"net/http"
 	"time"
 
-	pb "cloupeer.io/cloupeer/api/proto/v1"
-	"cloupeer.io/cloupeer/internal/vehicleagent/core"
-	"cloupeer.io/cloupeer/pkg/log"
+	pb "github.com/autopeer-io/autopeer/api/proto/v1"
+	"github.com/autopeer-io/autopeer/internal/vehicleagent/core"
+	"github.com/autopeer-io/autopeer/pkg/log"
 )
 
 func (m *Manager) AckCommand(ctx context.Context, name, status, message string) {

@@ -167,7 +167,7 @@ linters-settings:
     # put imports beginning with prefix after 3rd-party packages;
     # only support one prefix
     # if not set, use goimports.local-prefixes
-    prefix: cloupeer.io/cloupeer
+    prefix: autopeer-io/autopeer
   gocognit:
     # minimal code complexity to report, 30 by default (but we recommend 10-20)
     min-complexity: 30
@@ -324,7 +324,7 @@ linters-settings:
   goimports:
     # put imports beginning with prefix after 3rd-party packages;
     # it's a comma-separated list of prefixes
-    local-prefixes: cloupeer.io/cloupeer
+    local-prefixes: autopeer-io/autopeer
   golint:
     # minimal confidence for issues, default is 0.8
     min-confidence: 0.9
@@ -460,27 +460,27 @@ linters-settings:
       # see https://github.com/julz/importas#use-regular-expression for details
       - pkg: knative.dev/serving/pkg/apis/(\w+)/(v[\w\d]+)
         alias: $1$2
-      - pkg: cloupeer.io/cloupeer/internal/pkg/util/(\w+)
+      - pkg: github.com/autopeer-io/autopeer/internal/pkg/util/(\w+)
         alias: ${1}util
-      - pkg: cloupeer.io/cloupeer/internal/registry/apps/(\w+)/storage
+      - pkg: github.com/autopeer-io/autopeer/internal/registry/apps/(\w+)/storage
         alias: ${1}store
-      - pkg: cloupeer.io/cloupeer/pkg/streams/connector/(\w+)
+      - pkg: github.com/autopeer-io/autopeer/pkg/streams/connector/(\w+)
         alias: ${1}connector
-      - pkg: cloupeer.io/cloupeer/internal/cpeerctl/util/options
+      - pkg: github.com/autopeer-io/autopeer/internal/cpeerctl/util/options
         alias: clioptions
-      - pkg: cloupeer.io/cloupeer/internal/cpeerctl/cmd/util
+      - pkg: github.com/autopeer-io/autopeer/internal/cpeerctl/cmd/util
         alias: cmdutil
-      - pkg: cloupeer.io/cloupeer/pkg/generated/clientset/versioned
+      - pkg: github.com/autopeer-io/autopeer/pkg/generated/clientset/versioned
         alias: clientset
       - pkg: k8s.io/kubernetes/pkg/apis/core/validation
         alias: corevalidation
       - pkg: k8s.io/apimachinery/pkg/api/validation
         alias: apimachineryvalidation
-      - pkg: cloupeer.io/cloupeer/pkg/generated/informers/externalversions
+      - pkg: github.com/autopeer-io/autopeer/pkg/generated/informers/externalversions
         alias: informers
-      - pkg: cloupeer.io/cloupeer/internal/registry/(\w+)/rest
+      - pkg: github.com/autopeer-io/autopeer/internal/registry/(\w+)/rest
         alias: ${1}rest
-      - pkg: cloupeer.io/cloupeer/pkg/options
+      - pkg: github.com/autopeer-io/autopeer/pkg/options
         alias: genericoptions
       - pkg: k8s.io/api/core/v1
         alias: corev1
@@ -488,19 +488,19 @@ linters-settings:
         alias: api
       - pkg: k8s.io/apimachinery/pkg/apis/meta/v1
         alias: metav1
-      - pkg: cloupeer.io/cloupeer/pkg/apis/core/v1
+      - pkg: github.com/autopeer-io/autopeer/pkg/apis/core/v1
         alias: apiv1
       - pkg: github.com/go-kratos/kratos/v2/log
         alias: krtlog
       - pkg: github.com/casbin/casbin/v2/log
         alias: clog
-      - pkg: cloupeer.io/cloupeer/internal/pkg/middleware/i18n
+      - pkg: github.com/autopeer-io/autopeer/internal/pkg/middleware/i18n
         alias: i18nmw
-      - pkg: cloupeer.io/cloupeer/internal/pkg/metrics
+      - pkg: github.com/autopeer-io/autopeer/internal/pkg/metrics
         alias: cpeermetrics
       - pkg: github.com/go-kratos/kratos/contrib/metrics/prometheus/v2
         alias: prom
-      - pkg: cloupeer.io/cloupeer/pkg/authn/jwt
+      - pkg: github.com/autopeer-io/autopeer/pkg/authn/jwt
         alias: jwtauthn
       - pkg: github.com/hashicorp/golang-lru
         alias: lru

@@ -7,8 +7,8 @@ import (
 	"strings"
 	"syscall"
 
-	"cloupeer.io/cloupeer/internal/vehicleagent/core"
-	"cloupeer.io/cloupeer/pkg/log"
+	"github.com/autopeer-io/autopeer/internal/vehicleagent/core"
+	"github.com/autopeer-io/autopeer/pkg/log"
 )
 
 // LinuxHAL 是真实车机环境的适配器
@@ -20,14 +20,14 @@ func NewHAL() core.HAL {
 
 func (h *LinuxHAL) GetVehicleID() string {
 	// 真实：读取 /etc/machine-id 或专门的 VIN 码文件
-	data, _ := os.ReadFile("/etc/cloupeer/vin")
+	data, _ := os.ReadFile("/etc/autopeer/vin")
 	return strings.TrimSpace(string(data))
 }
 
 func (h *LinuxHAL) GetFirmwareVersion() string {
 	// 真实：读取 /etc/os-release 中的 VERSION_ID
 	// 这里简化为读取一个固定文件
-	data, _ := os.ReadFile("/etc/cloupeer/version")
+	data, _ := os.ReadFile("/etc/autopeer/version")
 	return strings.TrimSpace(string(data))
 }
 

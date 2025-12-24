@@ -1,7 +1,7 @@
 package vehiclecommand
 
 import (
-	iovv1alpha2 "cloupeer.io/cloupeer/pkg/apis/iov/v1alpha2"
+	iovv1alpha2 "github.com/autopeer-io/autopeer/pkg/apis/iov/v1alpha2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 

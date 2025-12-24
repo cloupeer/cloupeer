@@ -1,6 +1,6 @@
 package paths
 
-// Topic segments for the Cloupeer IoV protocol.
+// Topic segments for the Autopeer IoV protocol.
 // These constants define the routing topology contract between Cloud (Hub) and Edge (Agent).
 
 // Downstream: Cloud -> Edge (Directives & Responses)

@@ -3,7 +3,7 @@ package options
 import (
 	"time"
 
-	"cloupeer.io/cloupeer/pkg/mqtt"
+	"github.com/autopeer-io/autopeer/pkg/mqtt"
 	"github.com/spf13/pflag"
 )
 
@@ -35,7 +35,7 @@ type MqttOptions struct {
 // NewMqttOptions creates a new MqttOptions with default values.
 func NewMqttOptions() *MqttOptions {
 	return &MqttOptions{
-		Broker:             "wss://mqtt.cloupeer.io/mqtt",
+		Broker:             "wss://mqtt.autopeer.io/mqtt",
 		Username:           "admin",
 		Password:           "public",
 		KeepAlive:          60 * time.Second,

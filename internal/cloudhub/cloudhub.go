@@ -3,9 +3,9 @@ package cloudhub
 import (
 	"context"
 
-	"cloupeer.io/cloupeer/internal/cloudhub/k8s"
-	"cloupeer.io/cloupeer/internal/cloudhub/server"
-	"cloupeer.io/cloupeer/pkg/log"
+	"github.com/autopeer-io/autopeer/internal/cloudhub/k8s"
+	"github.com/autopeer-io/autopeer/internal/cloudhub/server"
+	"github.com/autopeer-io/autopeer/pkg/log"
 )
 
 // CloudHubServer is the main application struct for CloudHub.

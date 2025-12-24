@@ -12,7 +12,7 @@ rules:
   - create
   - patch
 - apiGroups:
-  - iov.cloupeer.io
+  - iov.autopeer.io
   resources:
   - vehiclecommands
   - vehicles
@@ -25,14 +25,14 @@ rules:
   - update
   - watch
 - apiGroups:
-  - iov.cloupeer.io
+  - iov.autopeer.io
   resources:
   - vehiclecommands/finalizers
   - vehicles/finalizers
   verbs:
   - update
 - apiGroups:
-  - iov.cloupeer.io
+  - iov.autopeer.io
   resources:
   - vehiclecommands/status
   - vehicles/status

@@ -7,7 +7,7 @@ import (
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	iovv1alpha2 "cloupeer.io/cloupeer/pkg/apis/iov/v1alpha2"
+	iovv1alpha2 "github.com/autopeer-io/autopeer/pkg/apis/iov/v1alpha2"
 )
 
 // GarbageCollector handles the periodic cleanup of stale VehicleCommand resources.

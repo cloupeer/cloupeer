@@ -11,7 +11,7 @@ import (
 	"github.com/spf13/viper"
 	"k8s.io/client-go/util/homedir"
 
-	"cloupeer.io/cloupeer/pkg/log"
+	"github.com/autopeer-io/autopeer/pkg/log"
 )
 
 const configFlagName = "config"

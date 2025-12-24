@@ -1,6 +1,6 @@
 package main
 
-import "cloupeer.io/cloupeer/cmd/cpeer-vehicle-agent/app"
+import "github.com/autopeer-io/autopeer/cmd/cpeer-vehicle-agent/app"
 
 func main() {
 	app.NewApp().Run()

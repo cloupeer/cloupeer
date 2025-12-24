@@ -14,8 +14,8 @@ import (
 	cliflag "k8s.io/component-base/cli/flag"
 	"k8s.io/component-base/term"
 
-	"cloupeer.io/cloupeer/pkg/log"
-	"cloupeer.io/cloupeer/pkg/version"
+	"github.com/autopeer-io/autopeer/pkg/log"
+	"github.com/autopeer-io/autopeer/pkg/version"
 )
 
 // App is the main structure of a cli application.

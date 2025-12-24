@@ -5,7 +5,7 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
-	"cloupeer.io/cloupeer/pkg/log"
+	"github.com/autopeer-io/autopeer/pkg/log"
 )
 
 // Server defines the common interface for all sub-servers (grpc, mqtt, http).

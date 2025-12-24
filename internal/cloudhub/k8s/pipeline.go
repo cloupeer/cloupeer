@@ -8,9 +8,9 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"cloupeer.io/cloupeer/internal/cloudhub/core/model"
-	iovv1alpha2 "cloupeer.io/cloupeer/pkg/apis/iov/v1alpha2"
-	"cloupeer.io/cloupeer/pkg/log"
+	"github.com/autopeer-io/autopeer/internal/cloudhub/core/model"
+	iovv1alpha2 "github.com/autopeer-io/autopeer/pkg/apis/iov/v1alpha2"
+	"github.com/autopeer-io/autopeer/pkg/log"
 )
 
 // StatusPipeline implements a write-merging buffer for K8s status updates.
@@ -111,7 +111,7 @@ func (p *StatusPipeline) patchStatus(ctx context.Context, vin string, update *mo
 	// We only want to touch specific fields in .status
 	// structure: {"status": {"online": true, "lastSeenTime": "..."}}
 	patchMap := map[string]any{
-		"apiVersion": "iov.cloupeer.io/v1alpha2",
+		"apiVersion": "iov.autopeer.io/v1alpha2",
 		"kind":       "Vehicle",
 		"metadata": map[string]any{
 			"name":      vinToMetaName(vin),

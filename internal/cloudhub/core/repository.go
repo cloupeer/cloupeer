@@ -3,7 +3,7 @@ package core
 import (
 	"context"
 
-	"cloupeer.io/cloupeer/internal/cloudhub/core/model"
+	"github.com/autopeer-io/autopeer/internal/cloudhub/core/model"
 )
 
 type Repository interface {
@@ -12,7 +12,7 @@ type Repository interface {
 }
 
 // VehicleRepository defines the interface for interacting with vehicle persistent data.
-// In Cloupeer, this is implemented by the K8s Adapter.
+// In Autopeer, this is implemented by the K8s Adapter.
 type VehicleRepository interface {
 	// Get retrieves a vehicle by its VIN.
 	Get(ctx context.Context, vin string) (*model.Vehicle, error)

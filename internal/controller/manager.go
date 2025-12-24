@@ -12,17 +12,17 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
-	"cloupeer.io/cloupeer/internal/controller/vehicle"
-	"cloupeer.io/cloupeer/internal/controller/vehiclecommand"
-	iovv1alpha2 "cloupeer.io/cloupeer/pkg/apis/iov/v1alpha2"
-	"cloupeer.io/cloupeer/pkg/log"
+	"github.com/autopeer-io/autopeer/internal/controller/vehicle"
+	"github.com/autopeer-io/autopeer/internal/controller/vehiclecommand"
+	iovv1alpha2 "github.com/autopeer-io/autopeer/pkg/apis/iov/v1alpha2"
+	"github.com/autopeer-io/autopeer/pkg/log"
 )
 
-var cloupeerScheme = runtime.NewScheme()
+var autopeerScheme = runtime.NewScheme()
 
 func init() {
-	utilruntime.Must(scheme.AddToScheme(cloupeerScheme))
-	utilruntime.Must(iovv1alpha2.AddToScheme(cloupeerScheme))
+	utilruntime.Must(scheme.AddToScheme(autopeerScheme))
+	utilruntime.Must(iovv1alpha2.AddToScheme(autopeerScheme))
 }
 
 type Controller interface {
@@ -31,7 +31,7 @@ type Controller interface {
 
 func NewControllerManager(ctx context.Context, kubeconfig *rest.Config, healthProbe string, metricsAddr string, hubAddr string) (manager.Manager, error) {
 	mgr, err := ctrl.NewManager(kubeconfig, ctrl.Options{
-		Scheme:                 cloupeerScheme,
+		Scheme:                 autopeerScheme,
 		Metrics:                server.Options{BindAddress: metricsAddr},
 		HealthProbeBindAddress: healthProbe,
 	})

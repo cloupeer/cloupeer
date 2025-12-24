@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Copyright 2025 The Cloupeer Authors.
+# Copyright 2025 The Autopeer Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -39,7 +39,7 @@ source "${PROJECT_ROOT}/hack/lib/prelude.sh"
 # Provide default values for consumed environment variables for robustness.
 readonly KUSTOMIZE="${KUSTOMIZE:-${PROJECT_ROOT}/bin/kustomize}"
 readonly KUBECTL="${KUBECTL:-kubectl}"
-readonly PUBLIC_REGISTRY="${PUBLIC_REGISTRY:-registry.cloupeer.io/cloupeer}"
+readonly PUBLIC_REGISTRY="${PUBLIC_REGISTRY:-ghcr.io/autopeer}"
 readonly VERSION="${VERSION:-dev}"
 
 # ---

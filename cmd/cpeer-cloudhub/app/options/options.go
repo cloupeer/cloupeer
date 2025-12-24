@@ -4,10 +4,10 @@ import (
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	cliflag "k8s.io/component-base/cli/flag"
 
-	"cloupeer.io/cloupeer/internal/cloudhub"
-	"cloupeer.io/cloupeer/pkg/app"
-	"cloupeer.io/cloupeer/pkg/log"
-	"cloupeer.io/cloupeer/pkg/options"
+	"github.com/autopeer-io/autopeer/internal/cloudhub"
+	"github.com/autopeer-io/autopeer/pkg/app"
+	"github.com/autopeer-io/autopeer/pkg/log"
+	"github.com/autopeer-io/autopeer/pkg/options"
 )
 
 type HubOptions struct {

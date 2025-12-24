@@ -4,14 +4,14 @@ import (
 	"encoding/json"
 	"fmt"
 
-	pb "cloupeer.io/cloupeer/api/proto/v1"
-	"cloupeer.io/cloupeer/internal/pkg/mqtt/paths"
-	"cloupeer.io/cloupeer/internal/vehicleagent/hal"
-	"cloupeer.io/cloupeer/internal/vehicleagent/hub"
-	"cloupeer.io/cloupeer/internal/vehicleagent/ota"
-	"cloupeer.io/cloupeer/pkg/mqtt"
-	mqtttopic "cloupeer.io/cloupeer/pkg/mqtt/topic"
-	"cloupeer.io/cloupeer/pkg/options"
+	pb "github.com/autopeer-io/autopeer/api/proto/v1"
+	"github.com/autopeer-io/autopeer/internal/pkg/mqtt/paths"
+	"github.com/autopeer-io/autopeer/internal/vehicleagent/hal"
+	"github.com/autopeer-io/autopeer/internal/vehicleagent/hub"
+	"github.com/autopeer-io/autopeer/internal/vehicleagent/ota"
+	"github.com/autopeer-io/autopeer/pkg/mqtt"
+	mqtttopic "github.com/autopeer-io/autopeer/pkg/mqtt/topic"
+	"github.com/autopeer-io/autopeer/pkg/options"
 )
 
 type Config struct {

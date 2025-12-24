@@ -3,5 +3,5 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   # The name doesn't need a namespace as it will be applied within one.
-  name: cloupeer-editor
+  name: autopeer-editor
 rules:

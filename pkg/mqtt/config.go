@@ -23,11 +23,11 @@ type ClientConfig struct {
 	ConnectTimeout time.Duration
 
 	// CleanStart indicates whether to start a clean session.
-	// For Cloupeer agents, this is usually false to receive missed messages.
+	// For Autopeer agents, this is usually false to receive missed messages.
 	CleanStart bool
 
 	// InsecureSkipVerify disables TLS certificate verification.
-	// MUST be true for Cloupeer's self-signed certs environment.
+	// MUST be true for Autopeer's self-signed certs environment.
 	InsecureSkipVerify bool
 
 	// Last Will and Testament (LWT) settings

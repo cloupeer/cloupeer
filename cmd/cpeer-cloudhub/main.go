@@ -1,6 +1,6 @@
 package main
 
-import "cloupeer.io/cloupeer/cmd/cpeer-cloudhub/app"
+import "github.com/autopeer-io/autopeer/cmd/cpeer-cloudhub/app"
 
 func main() {
 	app.NewApp().Run()

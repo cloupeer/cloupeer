@@ -8,10 +8,10 @@ kind: ClusterRole
 metadata:
   name: hub-role
 rules:
-- apiGroups: ["iov.cloupeer.io"]
+- apiGroups: ["iov.autopeer.io"]
   resources: ["vehicles"]
   verbs: ["get", "list", "watch", "create", "patch", "update"]
-- apiGroups: ["iov.cloupeer.io"]
+- apiGroups: ["iov.autopeer.io"]
   resources: ["vehiclecommands", "vehiclecommands/status"]
   verbs: ["get", "list", "watch", "patch", "update"]
 ---

@@ -11,16 +11,16 @@ import (
 	"k8s.io/component-base/featuregate"
 	controllerruntime "sigs.k8s.io/controller-runtime"
 
-	"cloupeer.io/cloupeer/cmd/cpeer-controller-manager/app/options"
-	"cloupeer.io/cloupeer/internal/controller"
-	"cloupeer.io/cloupeer/pkg/log"
+	"github.com/autopeer-io/autopeer/cmd/cpeer-controller-manager/app/options"
+	"github.com/autopeer-io/autopeer/internal/controller"
+	"github.com/autopeer-io/autopeer/pkg/log"
 )
 
 func NewControllerManagerCommand(ctx context.Context) *cobra.Command {
 	opts := options.NewControllerManagerOptions()
 	cmd := &cobra.Command{
 		Use:  "cpeer-controller-manager",
-		Long: "The Cloupeer Controller Manager is a daemon that embeds the core control loops for the Cloupeer platform.",
+		Long: "The Autopeer Controller Manager is a daemon that embeds the core control loops for the Autopeer platform.",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			log.Init(opts.LogOptions)
 			controllerruntime.SetLogger(log.Std().Logr())

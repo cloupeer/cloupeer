@@ -1,7 +1,7 @@
 package service
 
 import (
-	"cloupeer.io/cloupeer/internal/cloudhub/core"
+	"github.com/autopeer-io/autopeer/internal/cloudhub/core"
 )
 
 // Service implements the core business logic (Use Cases) for CloudHub.

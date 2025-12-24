@@ -26,7 +26,7 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 //
-// HubService defines the RPC interface for the Cloupeer Hub.
+// HubService defines the RPC interface for the Autopeer Hub.
 type HubServiceClient interface {
 	// SendCommand transmits a command from the Controller to the Hub.
 	// The Hub is then responsible for forwarding this to the target vehicle (e.g. via MQTT).
@@ -55,7 +55,7 @@ func (c *hubServiceClient) SendCommand(ctx context.Context, in *SendCommandReque
 // All implementations must embed UnimplementedHubServiceServer
 // for forward compatibility
 //
-// HubService defines the RPC interface for the Cloupeer Hub.
+// HubService defines the RPC interface for the Autopeer Hub.
 type HubServiceServer interface {
 	// SendCommand transmits a command from the Controller to the Hub.
 	// The Hub is then responsible for forwarding this to the target vehicle (e.g. via MQTT).

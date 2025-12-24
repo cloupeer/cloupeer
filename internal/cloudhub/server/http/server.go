@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"time"
 
-	"cloupeer.io/cloupeer/pkg/log"
-	"cloupeer.io/cloupeer/pkg/options"
+	"github.com/autopeer-io/autopeer/pkg/log"
+	"github.com/autopeer-io/autopeer/pkg/options"
 )
 
 type Server struct {

@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"time"
 
-	"cloupeer.io/cloupeer/internal/cloudhub/core/model"
-	"cloupeer.io/cloupeer/internal/pkg/util"
+	"github.com/autopeer-io/autopeer/internal/cloudhub/core/model"
+	"github.com/autopeer-io/autopeer/internal/pkg/util"
 )
 
 // RegisterVehicle handles the registration of a vehicle when it connects.

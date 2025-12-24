@@ -9,8 +9,8 @@ import (
 	controllerclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 
-	iovv1alpha2 "cloupeer.io/cloupeer/pkg/apis/iov/v1alpha2"
-	"cloupeer.io/cloupeer/pkg/log"
+	iovv1alpha2 "github.com/autopeer-io/autopeer/pkg/apis/iov/v1alpha2"
+	"github.com/autopeer-io/autopeer/pkg/log"
 )
 
 // NewClient creates a generic K8s client for CRD operations.
@@ -32,11 +32,11 @@ func NewClient(kubeconfigPath string) (controllerclient.Client, error) {
 
 	// Register our API types (Vehicle, VehicleCommand) into the scheme
 	// Scheme is required by controller-runtime client to understand our CRDs.
-	cloupeerscheme := runtime.NewScheme()
-	utilruntime.Must(scheme.AddToScheme(cloupeerscheme)) // Add standard schemes like v1.Pod, etc.
-	utilruntime.Must(iovv1alpha2.AddToScheme(cloupeerscheme))
+	autopeerscheme := runtime.NewScheme()
+	utilruntime.Must(scheme.AddToScheme(autopeerscheme)) // Add standard schemes like v1.Pod, etc.
+	utilruntime.Must(iovv1alpha2.AddToScheme(autopeerscheme))
 
-	c, err := controllerclient.New(cfg, controllerclient.Options{Scheme: cloupeerscheme})
+	c, err := controllerclient.New(cfg, controllerclient.Options{Scheme: autopeerscheme})
 	if err != nil {
 		return nil, err
 	}
@@ -52,11 +52,11 @@ func InitializeK8sClient() (controllerclient.Client, error) {
 	}
 
 	// Create a new scheme and add all our API types and standard types
-	cloupeerscheme := runtime.NewScheme()
-	utilruntime.Must(scheme.AddToScheme(cloupeerscheme)) // Add standard schemes like v1.Pod, etc.
-	utilruntime.Must(iovv1alpha2.AddToScheme(cloupeerscheme))
+	autopeerscheme := runtime.NewScheme()
+	utilruntime.Must(scheme.AddToScheme(autopeerscheme)) // Add standard schemes like v1.Pod, etc.
+	utilruntime.Must(iovv1alpha2.AddToScheme(autopeerscheme))
 
-	k8sclient, err := controllerclient.New(k8sconfig, controllerclient.Options{Scheme: cloupeerscheme})
+	k8sclient, err := controllerclient.New(k8sconfig, controllerclient.Options{Scheme: autopeerscheme})
 	if err != nil {
 		log.Error(err, "failed to create kubernetes client")
 		return nil, err

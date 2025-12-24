@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"cloupeer.io/cloupeer/internal/cloudhub/core/model"
+	"github.com/autopeer-io/autopeer/internal/cloudhub/core/model"
 )
 
 // UpdateCommandStatus handles status reports from the vehicle agent regarding a specific command.

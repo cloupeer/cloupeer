@@ -3,7 +3,7 @@ package k8s
 import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"cloupeer.io/cloupeer/internal/cloudhub/core"
+	"github.com/autopeer-io/autopeer/internal/cloudhub/core"
 )
 
 var _ core.Repository = (*repository)(nil)

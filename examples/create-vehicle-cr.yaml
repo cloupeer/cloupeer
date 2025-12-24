@@ -1,8 +1,8 @@
-apiVersion: iov.cloupeer.io/v1alpha2
+apiVersion: iov.autopeer.io/v1alpha2
 kind: Vehicle
 metadata:
   name: mock-vh-1764908080-1
-  namespace: cloupeer-system # 因为 scope 是 Namespaced，所以最好明确指定
+  namespace: autopeer-io # 因为 scope 是 Namespaced，所以最好明确指定
 spec:
   description: "A vehicle for test"
   firmwareVersion: v1.9.3

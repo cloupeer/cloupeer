@@ -5,7 +5,7 @@ import (
 
 	"k8s.io/apiserver/pkg/server"
 
-	"cloupeer.io/cloupeer/cmd/cpeer-controller-manager/app"
+	"github.com/autopeer-io/autopeer/cmd/cpeer-controller-manager/app"
 )
 
 func main() {

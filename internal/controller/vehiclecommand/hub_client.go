@@ -9,12 +9,12 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	pb "cloupeer.io/cloupeer/api/proto/v1"
-	"cloupeer.io/cloupeer/internal/pkg/metrics"
-	grpcmiddleware "cloupeer.io/cloupeer/internal/pkg/middleware/grpc"
+	pb "github.com/autopeer-io/autopeer/api/proto/v1"
+	"github.com/autopeer-io/autopeer/internal/pkg/metrics"
+	grpcmiddleware "github.com/autopeer-io/autopeer/internal/pkg/middleware/grpc"
 )
 
-// HubClient defines the interface for interacting with the Cloupeer Hub.
+// HubClient defines the interface for interacting with the Autopeer Hub.
 // Note: It now implicitly satisfies manager.Runnable because of Start(context.Context) error.
 type HubClient interface {
 	Start(ctx context.Context) error

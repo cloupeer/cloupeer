@@ -8,9 +8,9 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	pb "cloupeer.io/cloupeer/api/proto/v1"
-	"cloupeer.io/cloupeer/internal/pkg/metrics"
-	iovv1alpha2 "cloupeer.io/cloupeer/pkg/apis/iov/v1alpha2"
+	pb "github.com/autopeer-io/autopeer/api/proto/v1"
+	"github.com/autopeer-io/autopeer/internal/pkg/metrics"
+	iovv1alpha2 "github.com/autopeer-io/autopeer/pkg/apis/iov/v1alpha2"
 )
 
 // SenderReconciler is responsible for sending pending commands to the Hub.

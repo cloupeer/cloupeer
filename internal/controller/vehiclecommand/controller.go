@@ -13,7 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	iovv1alpha2 "cloupeer.io/cloupeer/pkg/apis/iov/v1alpha2"
+	iovv1alpha2 "github.com/autopeer-io/autopeer/pkg/apis/iov/v1alpha2"
 )
 
 // Reconciler reconciles a VehicleCommand object
@@ -45,9 +45,9 @@ func NewReconciler(cli client.Client, sche *runtime.Scheme, recorder record.Even
 	}
 }
 
-//+kubebuilder:rbac:groups=iov.cloupeer.io,resources=vehiclecommands,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=iov.cloupeer.io,resources=vehiclecommands/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=iov.cloupeer.io,resources=vehiclecommands/finalizers,verbs=update
+//+kubebuilder:rbac:groups=iov.autopeer.io,resources=vehiclecommands,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=iov.autopeer.io,resources=vehiclecommands/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=iov.autopeer.io,resources=vehiclecommands/finalizers,verbs=update
 //+kubebuilder:rbac:groups="",resources=events,verbs=create;patch
 
 // Reconcile handles the lifecycle of a VehicleCommand.

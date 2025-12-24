@@ -1,4 +1,4 @@
-# Copyright 2025 The Cloupeer Authors.
+# Copyright 2025 The Autopeer Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -32,8 +32,8 @@ export OUTPUT_DIR     := $(PROJECT_ROOT)/_output
 #@ Project Identity & Version
 # ------------------------------------------------------------------------------
 # The base for all container images.
-export PUBLIC_REGISTRY  := registry.cloupeer.io/cloupeer
-export PUSH_REGISTRY    := ghcr.io/cloupeer
+export PUBLIC_REGISTRY  := ghcr.io/autopeer
+export PUSH_REGISTRY    := ghcr.io/autopeer
 # The project version. Defaults to the output of 'git describe'.
 export VERSION          ?= $(shell git describe --tags --always --dirty)
 
@@ -73,7 +73,7 @@ export COMMON_PACKAGE_SCOPE := ./api/...
 # This section defines all external build-time dependencies.
 
 # Versions
-export GOLANG_VERSION           ?= 1.25.1  # The Go version for Cloupeer
+export GOLANG_VERSION           ?= 1.25.1  # The Go version for Autopeer
 export ENVTEST_K8S_VERSION      ?= 1.31.10 # The K8s version for envtest assets
 
 # Tool Versions

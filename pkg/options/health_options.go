@@ -8,7 +8,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/spf13/pflag"
 
-	"cloupeer.io/cloupeer/pkg/log"
+	"github.com/autopeer-io/autopeer/pkg/log"
 )
 
 var _ IOptions = (*HealthOptions)(nil)

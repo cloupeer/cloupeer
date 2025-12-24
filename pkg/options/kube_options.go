@@ -9,7 +9,7 @@ var _ IOptions = (*KubeOptions)(nil)
 // KubeOptions contains configuration for Kubernetes client interactions.
 type KubeOptions struct {
 	// Namespace is the Kubernetes namespace to watch or operate in.
-	// Default is usually "cloupeer-system" or extracted from the pod environment.
+	// Default is usually "autopeer-io" or extracted from the pod environment.
 	Namespace string `json:"namespace" mapstructure:"namespace"`
 
 	// KubeConfig is the path to the kubeconfig file.
@@ -24,7 +24,7 @@ type KubeOptions struct {
 // NewKubeOptions creates a new KubeOptions with default values.
 func NewKubeOptions() *KubeOptions {
 	return &KubeOptions{
-		Namespace:  "cloupeer-system",
+		Namespace:  "autopeer-io",
 		KubeConfig: "", // Default to empty, letting client-go resolve it automatically
 	}
 }

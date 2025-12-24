@@ -3,9 +3,9 @@ package hub
 import (
 	"fmt"
 
-	"cloupeer.io/cloupeer/internal/pkg/mqtt/adapter"
-	"cloupeer.io/cloupeer/internal/pkg/mqtt/paths"
-	"cloupeer.io/cloupeer/internal/vehicleagent/core"
+	"github.com/autopeer-io/autopeer/internal/pkg/mqtt/adapter"
+	"github.com/autopeer-io/autopeer/internal/pkg/mqtt/paths"
+	"github.com/autopeer-io/autopeer/internal/vehicleagent/core"
 )
 
 var (

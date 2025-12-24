@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"time"
 
-	pb "cloupeer.io/cloupeer/api/proto/v1"
-	"cloupeer.io/cloupeer/internal/vehicleagent/core"
-	"cloupeer.io/cloupeer/internal/vehicleagent/hub"
-	"cloupeer.io/cloupeer/pkg/log"
+	pb "github.com/autopeer-io/autopeer/api/proto/v1"
+	"github.com/autopeer-io/autopeer/internal/vehicleagent/core"
+	"github.com/autopeer-io/autopeer/internal/vehicleagent/hub"
+	"github.com/autopeer-io/autopeer/pkg/log"
 )
 
 type Agent struct {

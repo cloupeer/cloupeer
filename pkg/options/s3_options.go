@@ -17,9 +17,9 @@ type S3Options struct {
 
 func NewS3Options() *S3Options {
 	return &S3Options{
-		Endpoint:        "s3.cloupeer.io",
+		Endpoint:        "s3.autopeer.io",
 		AccessKeyID:     "admin",
-		SecretAccessKey: "public_cloupeer",
+		SecretAccessKey: "public_autopeer",
 		UseSSL:          true,
 		BucketName:      "firmware",
 		Region:          "us-east-1",

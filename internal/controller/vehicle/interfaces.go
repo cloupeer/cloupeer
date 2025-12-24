@@ -5,7 +5,7 @@ import (
 
 	ctrl "sigs.k8s.io/controller-runtime"
 
-	iovv1alpha2 "cloupeer.io/cloupeer/pkg/apis/iov/v1alpha2"
+	iovv1alpha2 "github.com/autopeer-io/autopeer/pkg/apis/iov/v1alpha2"
 )
 
 // SubReconciler defines the interface for a modular reconciliation step.

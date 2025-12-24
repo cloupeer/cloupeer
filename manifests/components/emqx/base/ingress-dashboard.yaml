@@ -2,18 +2,18 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: emqx-dashboard-ingress
-  namespace: cloupeer-system
+  namespace: autopeer-io
   annotations:
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
-    cert-manager.io/cluster-issuer: "cloupeer-prod-issuer"
+    cert-manager.io/cluster-issuer: "autopeer-prod-issuer"
 spec:
   ingressClassName: nginx
   tls:
     - hosts:
-        - "emqx.cloupeer.io"
+        - "emqx.autopeer.io"
       secretName: emqx-dashboard-tls
   rules:
-    - host: "emqx.cloupeer.io"
+    - host: "emqx.autopeer.io"
       http:
         paths:
           - path: /

@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"time"
 
-	"cloupeer.io/cloupeer/pkg/log"
-	"cloupeer.io/cloupeer/pkg/mqtt"
+	"github.com/autopeer-io/autopeer/pkg/log"
+	"github.com/autopeer-io/autopeer/pkg/mqtt"
 )
 
-// ExampleClient 展示了 Cloupeer MQTT 组件的标准使用流程。
+// ExampleClient 展示了 Autopeer MQTT 组件的标准使用流程。
 // 这个示例模拟了一个组件（如 Hub 或 Agent）如何初始化 MQTT 客户端、订阅主题并发送消息。
 func ExampleClient() {
 	// 1. 准备配置

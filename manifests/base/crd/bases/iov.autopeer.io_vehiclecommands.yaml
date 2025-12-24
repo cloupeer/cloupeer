@@ -4,9 +4,9 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.16.1
-  name: vehiclecommands.iov.cloupeer.io
+  name: vehiclecommands.iov.autopeer.io
 spec:
-  group: iov.cloupeer.io
+  group: iov.autopeer.io
   names:
     kind: VehicleCommand
     listKind: VehicleCommandList

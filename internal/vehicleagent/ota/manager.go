@@ -4,8 +4,8 @@ import (
 	"context"
 	"sync"
 
-	"cloupeer.io/cloupeer/internal/pkg/mqtt/adapter"
-	"cloupeer.io/cloupeer/internal/vehicleagent/core"
+	"github.com/autopeer-io/autopeer/internal/pkg/mqtt/adapter"
+	"github.com/autopeer-io/autopeer/internal/vehicleagent/core"
 )
 
 type Manager struct {

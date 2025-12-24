@@ -10,8 +10,8 @@ import (
 	"sync"
 	"time"
 
-	"cloupeer.io/cloupeer/internal/vehicleagent/core"
-	"cloupeer.io/cloupeer/pkg/log"
+	"github.com/autopeer-io/autopeer/internal/vehicleagent/core"
+	"github.com/autopeer-io/autopeer/pkg/log"
 )
 
 const (
@@ -39,7 +39,7 @@ func NewHAL() core.HAL {
 		mu.Unlock()
 	}
 
-	baseDir := filepath.Join(os.TempDir(), "cloupeer-devices", vid)
+	baseDir := filepath.Join(os.TempDir(), "autopeer-devices", vid)
 	if err := os.MkdirAll(baseDir, 0755); err != nil {
 		panic(fmt.Sprintf("failed to provision mock storage for %s: %v", vid, err))
 	}

@@ -1,5 +1,5 @@
 // This file is a standalone example for looplab/fsm.
-// It is not part of the Cloupeer project itself.
+// It is not part of the Autopeer project itself.
 package main
 
 import (

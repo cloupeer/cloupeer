@@ -5,7 +5,7 @@ import (
 )
 
 // VehicleFinalizer is the finalizer string used by the Vehicle controller.
-const VehicleFinalizer = "iov.cloupeer.io/vehicle-finalizer"
+const VehicleFinalizer = "iov.autopeer.io/vehicle-finalizer"
 
 // VehiclePhase defines the observed phase of the Vehicle OTA process.
 type VehiclePhase string

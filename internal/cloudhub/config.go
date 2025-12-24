@@ -3,17 +3,17 @@ package cloudhub
 import (
 	"fmt"
 
-	"cloupeer.io/cloupeer/internal/cloudhub/core/service"
-	"cloupeer.io/cloupeer/internal/cloudhub/k8s"
-	"cloupeer.io/cloupeer/internal/cloudhub/notifier"
-	"cloupeer.io/cloupeer/internal/cloudhub/server"
-	"cloupeer.io/cloupeer/internal/cloudhub/server/grpc"
-	"cloupeer.io/cloupeer/internal/cloudhub/server/http"
-	"cloupeer.io/cloupeer/internal/cloudhub/server/mqtt"
-	"cloupeer.io/cloupeer/internal/cloudhub/storage"
-	pkgmqtt "cloupeer.io/cloupeer/pkg/mqtt"
-	"cloupeer.io/cloupeer/pkg/mqtt/topic"
-	"cloupeer.io/cloupeer/pkg/options"
+	"github.com/autopeer-io/autopeer/internal/cloudhub/core/service"
+	"github.com/autopeer-io/autopeer/internal/cloudhub/k8s"
+	"github.com/autopeer-io/autopeer/internal/cloudhub/notifier"
+	"github.com/autopeer-io/autopeer/internal/cloudhub/server"
+	"github.com/autopeer-io/autopeer/internal/cloudhub/server/grpc"
+	"github.com/autopeer-io/autopeer/internal/cloudhub/server/http"
+	"github.com/autopeer-io/autopeer/internal/cloudhub/server/mqtt"
+	"github.com/autopeer-io/autopeer/internal/cloudhub/storage"
+	pkgmqtt "github.com/autopeer-io/autopeer/pkg/mqtt"
+	"github.com/autopeer-io/autopeer/pkg/mqtt/topic"
+	"github.com/autopeer-io/autopeer/pkg/options"
 )
 
 type Config struct {

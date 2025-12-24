@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Copyright 2025 The Cloupeer Authors.
+# Copyright 2025 The Autopeer Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -31,7 +31,7 @@ source "${PROJECT_ROOT}/hack/lib/prelude.sh"
 # ------------------------------------------------------------------------------
 #   - COMPONENTS:       A space-separated list of all components.
 #   - VERSION:          The project version, used for embedding in the binary.
-#   - PUSH_REGISTRY:    The registry for container images (e.g., ghcr.io/cloupeer).
+#   - PUSH_REGISTRY:    The registry for container images (e.g., ghcr.io/autopeer).
 #   - PLATFORMS:        Comma-separated list of platforms for multi-arch builds.
 #   - CONTAINER_TOOL:   The container tool to use (docker, podman).
 #   - IMG:              Optional. If set, overrides the calculated image tag.
@@ -40,7 +40,7 @@ source "${PROJECT_ROOT}/hack/lib/prelude.sh"
 # Provide default values for consumed environment variables for robustness.
 readonly COMPONENTS="${COMPONENTS:-}"
 readonly VERSION="${VERSION:-dev}"
-readonly PUSH_REGISTRY="${PUSH_REGISTRY:-ghcr.io/cloupeer}"
+readonly PUSH_REGISTRY="${PUSH_REGISTRY:-ghcr.io/autopeer}"
 readonly PLATFORMS="${PLATFORMS:-linux/amd64}"
 readonly CONTAINER_TOOL="${CONTAINER_TOOL:-docker}"
 readonly OUTPUT_DIR="${OUTPUT_DIR:-${PROJECT_ROOT}/_output}"
@@ -119,7 +119,7 @@ buildx_docker_image() {
         error "Dockerfile not found at ${dockerfile_path}. Please run 'make dockerfiles' first."
     fi
 
-    local builder_name="cloupeer-builder"
+    local builder_name="autopeer-builder"
     # Create and use a buildx builder if it doesn't already exist.
     if ! ${CONTAINER_TOOL} buildx ls | grep -q "${builder_name}"; then
         ${CONTAINER_TOOL} buildx create --name "${builder_name}" --use

@@ -6,7 +6,7 @@ import (
 )
 
 // VehicleFinalizer allows the controller to clean up resources (e.g. remove from EMQX authentication) before deletion.
-const VehicleFinalizer = "iov.cloupeer.io/vehicle-finalizer"
+const VehicleFinalizer = "iov.autopeer.io/vehicle-finalizer"
 
 // VehicleLifecycle defines the administrative intent for the vehicle's existence.
 // +kubebuilder:validation:Enum=Inventory;Active;Retired

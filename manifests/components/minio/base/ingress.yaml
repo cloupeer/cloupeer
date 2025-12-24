@@ -6,16 +6,16 @@ metadata:
     # 允许上传大文件 (固件包)
     nginx.ingress.kubernetes.io/proxy-body-size: "0"
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
-    cert-manager.io/cluster-issuer: "cloupeer-prod-issuer"
+    cert-manager.io/cluster-issuer: "autopeer-prod-issuer"
 spec:
   ingressClassName: nginx
   tls:
     - hosts:
-        - s3.cloupeer.io
-        - minio.cloupeer.io
+        - s3.autopeer.io
+        - minio.autopeer.io
       secretName: minio-tls
   rules:
-    - host: s3.cloupeer.io
+    - host: s3.autopeer.io
       http:
         paths:
           - path: /
@@ -25,7 +25,7 @@ spec:
                 name: minio
                 port:
                   number: 9000
-    - host: minio.cloupeer.io
+    - host: minio.autopeer.io
       http:
         paths:
           - path: /

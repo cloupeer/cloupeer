@@ -11,15 +11,15 @@ var (
 	// 1 = Ready, 0 = Not Ready (Idle, Connecting, TransientFailure)
 	HubConnectivityStatus = prometheus.NewGauge(
 		prometheus.GaugeOpts{
-			Name: "cloupeer_hub_connectivity_status",
-			Help: "The connectivity status to Cloupeer Hub (1=Ready, 0=NotReady).",
+			Name: "autopeer_hub_connectivity_status",
+			Help: "The connectivity status to Autopeer Hub (1=Ready, 0=NotReady).",
 		},
 	)
 
 	// CommandSentTotal 记录发送命令的总数
 	CommandSentTotal = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Name: "cloupeer_command_sent_total",
+			Name: "autopeer_command_sent_total",
 			Help: "Total number of VehicleCommands sent to Hub.",
 		},
 		[]string{"status", "type"}, // status: success/failed, type: OTA/Reboot
@@ -28,7 +28,7 @@ var (
 	// CommandLatency 记录 gRPC 调用耗时
 	CommandLatency = prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
-			Name:    "cloupeer_command_latency_seconds",
+			Name:    "autopeer_command_latency_seconds",
 			Help:    "Latency of sending commands to Hub via gRPC.",
 			Buckets: prometheus.DefBuckets, // 使用默认的桶分布 (.005, .01, .025, ...)
 		},

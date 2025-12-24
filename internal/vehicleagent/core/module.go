@@ -3,7 +3,7 @@ package core
 import (
 	"context"
 
-	"cloupeer.io/cloupeer/internal/pkg/mqtt/adapter"
+	"github.com/autopeer-io/autopeer/internal/pkg/mqtt/adapter"
 )
 
 type Module interface {

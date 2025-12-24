@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Copyright 2025 The Cloupeer Authors.
+# Copyright 2025 The Autopeer Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -121,7 +121,7 @@ generate_dockerfile_for_component() {
     # Use a Heredoc to write the templated Dockerfile.
     # Shell variables like ${GOLANG_VERSION} are automatically expanded.
     cat > "${output_file}" <<EOF
-# Copyright $(date +%Y) The Cloupeer Authors.
+# Copyright $(date +%Y) The Autopeer Authors.
 # DO NOT EDIT. THIS FILE IS AUTO-GENERATED.
 
 # --- Build Stage ---

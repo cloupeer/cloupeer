@@ -13,7 +13,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: manual # 关键：我们自定义一个类名，用于手动绑定
   hostPath:
-    path: /var/lib/cloupeer/minio-data # 数据将存储在容器节点的这个路径下
+    path: /var/lib/autopeer/minio-data # 数据将存储在容器节点的这个路径下
     type: DirectoryOrCreate
   nodeAffinity:
     required:

@@ -1,8 +1,8 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: cloupeer-system
+  name: autopeer-io
   labels:
-    app.kubernetes.io/name: cloupeer-system
-    app.kubernetes.io/part-of: cloupeer
+    app.kubernetes.io/name: autopeer-io
+    app.kubernetes.io/part-of: autopeer
     app.kubernetes.io/managed-by: kustomize

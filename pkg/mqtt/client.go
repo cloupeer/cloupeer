@@ -12,7 +12,7 @@ import (
 	"github.com/eclipse/paho.golang/autopaho"
 	"github.com/eclipse/paho.golang/paho"
 
-	"cloupeer.io/cloupeer/pkg/log"
+	"github.com/autopeer-io/autopeer/pkg/log"
 )
 
 type pahoClient struct {

@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"time"
 
-	"cloupeer.io/cloupeer/internal/cloudhub/core/service"
-	"cloupeer.io/cloupeer/internal/pkg/mqtt/adapter"
-	"cloupeer.io/cloupeer/internal/pkg/mqtt/paths"
-	"cloupeer.io/cloupeer/pkg/log"
-	pkgmqtt "cloupeer.io/cloupeer/pkg/mqtt"
-	"cloupeer.io/cloupeer/pkg/mqtt/topic"
+	"github.com/autopeer-io/autopeer/internal/cloudhub/core/service"
+	"github.com/autopeer-io/autopeer/internal/pkg/mqtt/adapter"
+	"github.com/autopeer-io/autopeer/internal/pkg/mqtt/paths"
+	"github.com/autopeer-io/autopeer/pkg/log"
+	pkgmqtt "github.com/autopeer-io/autopeer/pkg/mqtt"
+	"github.com/autopeer-io/autopeer/pkg/mqtt/topic"
 )
 
 // Server implements the MQTT ingress layer.

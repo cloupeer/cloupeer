@@ -6,20 +6,20 @@ import (
 
 	genericapiserver "k8s.io/apiserver/pkg/server"
 
-	"cloupeer.io/cloupeer/cmd/cpeer-cloudhub/app/options"
-	"cloupeer.io/cloupeer/pkg/app"
+	"github.com/autopeer-io/autopeer/cmd/cpeer-cloudhub/app/options"
+	"github.com/autopeer-io/autopeer/pkg/app"
 )
 
 const (
 	commandName = "cpeer-hub"
-	commandDesc = `The Cloupeer Hub runs ...`
+	commandDesc = `The Autopeer Hub runs ...`
 )
 
 func NewApp() *app.App {
 	opts := options.NewHubOptions()
 	application := app.NewApp(
 		commandName,
-		"Launch a Cloupeer hub server",
+		"Launch a Autopeer hub server",
 		app.WithDescription(commandDesc),
 		app.WithOptions(opts),
 		app.WithDefaultValidArgs(),

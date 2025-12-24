@@ -1,6 +1,6 @@
 # `looplab/fsm` 库示例 (十字转门状态机)
 
-本项目用于演示 `github.com/looplab/fsm` 库 的核心用法，完全独立于 Cloupeer 平台。
+本项目用于演示 `github.com/looplab/fsm` 库 的核心用法，完全独立于 Autopeer 平台。
 
 我们模拟一个地铁十字转门，它有两个状态和两个事件。
 

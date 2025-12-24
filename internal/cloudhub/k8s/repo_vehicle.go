@@ -10,9 +10,9 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"cloupeer.io/cloupeer/internal/cloudhub/core/model"
-	"cloupeer.io/cloupeer/internal/pkg/util"
-	iovv1alpha2 "cloupeer.io/cloupeer/pkg/apis/iov/v1alpha2"
+	"github.com/autopeer-io/autopeer/internal/cloudhub/core/model"
+	"github.com/autopeer-io/autopeer/internal/pkg/util"
+	iovv1alpha2 "github.com/autopeer-io/autopeer/pkg/apis/iov/v1alpha2"
 )
 
 type vehicleRepository struct {

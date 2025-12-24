@@ -2,17 +2,17 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 # Set the namespace for all resources
-namespace: cloupeer-system
+namespace: autopeer-io
 
 # Add a common prefix to all resource names
-namePrefix: cloupeer-
+namePrefix: autopeer-
 
 # Add common labels to all resources and their selectors
 labels:
 - pairs:
     control-plane: controller-manager
     app.kubernetes.io/name: cpeer-controller-manager
-    app.kubernetes.io/part-of: cloupeer
+    app.kubernetes.io/part-of: autopeer
     app.kubernetes.io/version: v0.1.0 # It's good practice to label with version
     app.kubernetes.io/managed-by: kustomize
   includeSelectors: true
@@ -21,7 +21,7 @@ labels:
 # The most important part for overlays: image transformation
 images:
 - name: controller-manager-placeholder # This must match the placeholder name in the base deployment.yaml
-  newName: registry.cloupeer.io/cloupeer/cpeer-controller-manager # The real registry path
+  newName: ghcr.io/autopeer/cpeer-controller-manager # The real registry path
   newTag: v0.1.0 # The specific tag for this deployment
 
 # All resources that this overlay builds upon.

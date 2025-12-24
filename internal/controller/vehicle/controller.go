@@ -13,7 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	iovv1alpha2 "cloupeer.io/cloupeer/pkg/apis/iov/v1alpha2"
+	iovv1alpha2 "github.com/autopeer-io/autopeer/pkg/apis/iov/v1alpha2"
 )
 
 type Reconciler struct {
@@ -48,9 +48,9 @@ func NewReconciler(cli client.Client, sche *runtime.Scheme, recorder record.Even
 }
 
 // RBAC markers are used by controller-gen to generate the ClusterRole
-// +kubebuilder:rbac:groups=iov.cloupeer.io,resources=vehicles,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=iov.cloupeer.io,resources=vehicles/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=iov.cloupeer.io,resources=vehicles/finalizers,verbs=update
+// +kubebuilder:rbac:groups=iov.autopeer.io,resources=vehicles,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=iov.autopeer.io,resources=vehicles/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=iov.autopeer.io,resources=vehicles/finalizers,verbs=update
 // +kubebuilder:rbac:groups="",resources=events,verbs=create;patch
 
 // Reconcile is the core logic for the Vehicle controller.

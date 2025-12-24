@@ -1,4 +1,4 @@
-# Copyright 2025 The Cloupeer Authors.
+# Copyright 2025 The Autopeer Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -160,7 +160,7 @@ manifests-emqx: $(HELM) ## Generate K8s manifests for EMQX from its Helm chart.
 	@mkdir -p manifests/components/emqx/base
 	@$(HELM) template emqx emqx/emqx \
 		--version 5.8.8 \
-		--namespace cloupeer-system \
+		--namespace autopeer-io \
 		-f manifests/components/emqx/values.yaml \
 		> manifests/components/emqx/base/emqx-generated.yaml
 	@echo "EMQX manifests generated successfully."

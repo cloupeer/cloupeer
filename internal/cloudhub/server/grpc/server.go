@@ -7,11 +7,11 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 
-	pb "cloupeer.io/cloupeer/api/proto/v1"
-	"cloupeer.io/cloupeer/internal/cloudhub/core/model"
-	"cloupeer.io/cloupeer/internal/cloudhub/core/service"
-	"cloupeer.io/cloupeer/pkg/log"
-	"cloupeer.io/cloupeer/pkg/options"
+	pb "github.com/autopeer-io/autopeer/api/proto/v1"
+	"github.com/autopeer-io/autopeer/internal/cloudhub/core/model"
+	"github.com/autopeer-io/autopeer/internal/cloudhub/core/service"
+	"github.com/autopeer-io/autopeer/pkg/log"
+	"github.com/autopeer-io/autopeer/pkg/options"
 )
 
 type Server struct {

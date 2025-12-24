@@ -1,4 +1,4 @@
-module cloupeer.io/cloupeer
+module github.com/autopeer-io/autopeer
 
 go 1.25.1
 

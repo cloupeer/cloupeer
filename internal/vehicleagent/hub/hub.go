@@ -8,10 +8,10 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 
-	"cloupeer.io/cloupeer/internal/vehicleagent/core"
-	"cloupeer.io/cloupeer/pkg/log"
-	"cloupeer.io/cloupeer/pkg/mqtt"
-	mqtttopic "cloupeer.io/cloupeer/pkg/mqtt/topic"
+	"github.com/autopeer-io/autopeer/internal/vehicleagent/core"
+	"github.com/autopeer-io/autopeer/pkg/log"
+	"github.com/autopeer-io/autopeer/pkg/mqtt"
+	mqtttopic "github.com/autopeer-io/autopeer/pkg/mqtt/topic"
 )
 
 type Hub struct {

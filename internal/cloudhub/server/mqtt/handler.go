@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	pb "cloupeer.io/cloupeer/api/proto/v1"
-	"cloupeer.io/cloupeer/internal/cloudhub/core/model"
-	"cloupeer.io/cloupeer/internal/pkg/mqtt/paths"
-	"cloupeer.io/cloupeer/pkg/log"
+	pb "github.com/autopeer-io/autopeer/api/proto/v1"
+	"github.com/autopeer-io/autopeer/internal/cloudhub/core/model"
+	"github.com/autopeer-io/autopeer/internal/pkg/mqtt/paths"
+	"github.com/autopeer-io/autopeer/pkg/log"
 	"google.golang.org/protobuf/encoding/protojson"
 )
 

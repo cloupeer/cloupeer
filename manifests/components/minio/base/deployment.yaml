@@ -31,7 +31,7 @@ spec:
         - name: MINIO_ROOT_USER
           value: "admin"
         - name: MINIO_ROOT_PASSWORD
-          value: "public_cloupeer" # 开发环境弱密码，生产环境请使用 Secret
+          value: "public_autopeer" # 开发环境弱密码，生产环境请使用 Secret
         ports:
         - containerPort: 9000
           name: api

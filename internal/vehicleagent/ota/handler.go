@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	pb "cloupeer.io/cloupeer/api/proto/v1"
-	"cloupeer.io/cloupeer/pkg/log"
+	pb "github.com/autopeer-io/autopeer/api/proto/v1"
+	"github.com/autopeer-io/autopeer/pkg/log"
 )
 
 func (m *Manager) HandleCommand(ctx context.Context, cmd *pb.AgentCommand) error {

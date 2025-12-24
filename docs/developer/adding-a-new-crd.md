@@ -1,6 +1,6 @@
-# 如何向 Cloupeer 添加一个新的 CRD
+# 如何向 Autopeer 添加一个新的 CRD
 
-本文档详细介绍了向 Cloupeer 项目添加一个新的 Custom Resource Definition (CRD) 的标准流程。我们将以 `Vehicle` CRD 为例进行说明。
+本文档详细介绍了向 Autopeer 项目添加一个新的 Custom Resource Definition (CRD) 的标准流程。我们将以 `Vehicle` CRD 为例进行说明。
 
 这个流程遵循 "API-First" 的原则：开发者首先定义 API 的数据结构，然后利用项目内置的工具链自动生成所需的模板代码和 Kubernetes 清单文件。
 
@@ -16,7 +16,7 @@
 所有的 API 类型定义都存放在 `pkg/apis/` 目录下。你需要为你的新 API 创建对应的 Group 和 Version 目录，并添加两个 Go 文件。
 
 假设我们要创建的 CRD 是：
-- **Group:** `iov.cloupeer.io`
+- **Group:** `iov.autopeer.io`
 - **Version:** `v1alpha2`
 - **Kind:** `Vehicle`
 
@@ -28,7 +28,7 @@
 
 ```go
 // +k8s:deepcopy-gen=package
-// +groupName=iov.cloupeer.io
+// +groupName=iov.autopeer.io
 package v1alpha2
 
 import (
@@ -38,7 +38,7 @@ import (
 
 var (
 	// GroupVersion is group version used to register these objects
-	GroupVersion = schema.GroupVersion{Group: "iov.cloupeer.io", Version: "v1alpha2"}
+	GroupVersion = schema.GroupVersion{Group: "iov.autopeer.io", Version: "v1alpha2"}
 
 	// SchemeBuilder is used to add go types to the GroupVersionKind scheme
 	SchemeBuilder = &scheme.Builder{GroupVersion: GroupVersion}
@@ -125,7 +125,7 @@ make manifests generate
 这个命令会触发 `hack/make-rules/generate.sh` 脚本，并完成以下所有工作：
 
 1.  **生成 DeepCopy 方法：** 在你的 `v1alpha2` 目录下创建一个 `zz_generated.deepcopy.go` 文件。你的 API 类型必须实现 `runtime.Object` 接口，这些方法是必需的。
-2.  **生成 CRD 清单：** 在 `manifests/base/crd/bases/` 目录下生成 `xxx.cloupeer.io_xxxxxxx.yaml` 文件。
+2.  **生成 CRD 清单：** 在 `manifests/base/crd/bases/` 目录下生成 `xxx.autopeer.io_xxxxxxx.yaml` 文件。
 3.  **更新 Kustomization：** 自动将新生成的 CRD 文件名添加到 `manifests/base/crd/bases/kustomization.yaml` 中。
 
 
@@ -135,7 +135,7 @@ make manifests generate
 
 1. 在 `internal/controller/` 目录下为你的 CRD 创建一个新目录，例如 `internal/controller/vehicle/`。
 2. 在该目录下创建一个 `vehiclecontroller.go` 文件，并编写你的 `Reconcile` 循环。
-3. 在 Reconcile 方法上添加 `//+kubebuilder:rbac:groups=iov.cloupeer.io,resources=vehicles,...` 标记。
+3. 在 Reconcile 方法上添加 `//+kubebuilder:rbac:groups=iov.autopeer.io,resources=vehicles,...` 标记。
 4. 打开 `internal/controller/manager.go`，在 `setupControllers` 函数中初始化并注册你的新 Controller。
 
 然后，再次执行：
@@ -159,4 +159,4 @@ make install
 make deploy ENV=dev COMPONENT=cpeer-controller-manager
 ```
 
-至此，你已经成功地向 Cloupeer 项目添加了一个新的 CRD。
+至此，你已经成功地向 Autopeer 项目添加了一个新的 CRD。

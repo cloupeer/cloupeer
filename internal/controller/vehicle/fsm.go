@@ -7,8 +7,8 @@ import (
 	"github.com/looplab/fsm"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	fsmutil "cloupeer.io/cloupeer/internal/pkg/util/fsm"
-	iovv1alpha2 "cloupeer.io/cloupeer/pkg/apis/iov/v1alpha2"
+	fsmutil "github.com/autopeer-io/autopeer/internal/pkg/util/fsm"
+	iovv1alpha2 "github.com/autopeer-io/autopeer/pkg/apis/iov/v1alpha2"
 )
 
 const (
