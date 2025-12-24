@@ -61,8 +61,7 @@ export COMPONENTS  := $(filter-out $(EXCLUDE_COMPONENTS), $(ALL_COMPONENTS))
 # implementation directory in 'internal/'.
 # Format: <cmd-component-name>:<internal-directory-name>
 # If a component is not listed here, it is assumed its internal directory has the same name.
-export COMPONENT_PATH_MAP := \
-    cpeer-controller-manager:controller
+export COMPONENT_PATH_MAP := 
 
 # Define other common package paths that should always be included in a component's scope.
 export COMMON_PACKAGE_SCOPE := ./api/...

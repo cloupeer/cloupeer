@@ -73,7 +73,7 @@ generate_manifests() {
         webhook \
         paths="./pkg/apis/...;./internal/controller/..." \
         output:crd:artifacts:config=${crd_bases_dir} \
-        output:rbac:stdout > manifests/components/cpeer-controller-manager/base/generated.manager-role.yaml \
+        output:rbac:stdout > manifests/components/controller/base/generated.manager-role.yaml \
         output:webhook:dir=manifests/base/webhook
 
     # Exit if controller-gen failed.

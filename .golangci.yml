@@ -466,9 +466,9 @@ linters-settings:
         alias: ${1}store
       - pkg: github.com/autopeer-io/autopeer/pkg/streams/connector/(\w+)
         alias: ${1}connector
-      - pkg: github.com/autopeer-io/autopeer/internal/cpeerctl/util/options
+      - pkg: github.com/autopeer-io/autopeer/internal/cli/util/options
         alias: clioptions
-      - pkg: github.com/autopeer-io/autopeer/internal/cpeerctl/cmd/util
+      - pkg: github.com/autopeer-io/autopeer/internal/cli/cmd/util
         alias: cmdutil
       - pkg: github.com/autopeer-io/autopeer/pkg/generated/clientset/versioned
         alias: clientset
@@ -497,7 +497,7 @@ linters-settings:
       - pkg: github.com/autopeer-io/autopeer/internal/pkg/middleware/i18n
         alias: i18nmw
       - pkg: github.com/autopeer-io/autopeer/internal/pkg/metrics
-        alias: cpeermetrics
+        alias: autopeermetrics
       - pkg: github.com/go-kratos/kratos/contrib/metrics/prometheus/v2
         alias: prom
       - pkg: github.com/autopeer-io/autopeer/pkg/authn/jwt

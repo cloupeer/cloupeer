@@ -144,7 +144,7 @@ make manifests generate
 make manifests generate
 ```
 
-这次会**更新 RBAC 权限：** 更新 `manifests/components/cpeer-controller-manager/base/generated.manager-role.yaml` 文件，为 controller-manager 添加操作新 `Vehicle` 资源的 ClusterRole 权限。
+这次会**更新 RBAC 权限：** 更新 `manifests/components/controller/base/generated.manager-role.yaml` 文件，为 controller-manager 添加操作新 `Vehicle` 资源的 ClusterRole 权限。
 
 
 ### 第 4 步：验证
@@ -156,7 +156,7 @@ make manifests generate
 make install
 
 # Deploy the controller manager with the new controller logic
-make deploy ENV=dev COMPONENT=cpeer-controller-manager
+make deploy ENV=dev COMPONENT=controller
 ```
 
 至此，你已经成功地向 Autopeer 项目添加了一个新的 CRD。

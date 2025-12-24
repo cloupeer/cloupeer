@@ -67,15 +67,15 @@ _get_packages_for_components() {
 
         # If no mapping was found, apply the fallback naming convention rules.
         if ! ${mapping_found}; then
-            if [[ "${comp}" == "cpeer-"* ]]; then
-                # Rule 2: Component name has the "cpeer-" prefix.
-                # Remove the "cpeer-" prefix. e.g., "cpeer-edge-agent" -> "edge-agent"
-                local path_without_prefix="${comp#cpeer-}"
-                # Remove all remaining hyphens. e.g., "vehicle-agent" -> "vehicleagent"
+            if [[ "${comp}" == "autopeer-"* ]]; then
+                # Rule 2: Component name has the "autopeer-" prefix.
+                # Remove the "autopeer-" prefix. e.g., "autopeer-agent" -> "agent"
+                local path_without_prefix="${comp#autopeer-}"
+                # Remove all remaining hyphens. e.g., "edge-agent" -> "edgeagent"
                 internal_path="${path_without_prefix//-/}"
             else
-                # Rule 3: Component name does not have the "cpeer-" prefix.
-                # Use the component name directly. e.g., "cpeerctl" -> "cpeerctl"
+                # Rule 3: Component name does not have the "autopeer-" prefix.
+                # Use the component name directly. e.g., "cli" -> "cli"
                 internal_path="${comp}"
             fi
         fi

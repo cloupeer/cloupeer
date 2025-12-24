@@ -1,6 +1,6 @@
 resources:
   - ../../base
-  - ../../components/cpeer-controller-manager/overlays/dev
-  - ../../components/cpeer-hub/overlays/dev
+  - ../../components/controller/overlays/dev
+  - ../../components/bridge/overlays/dev
   - ../../components/emqx/overlays/dev
   - ../../components/minio/overlays/dev

@@ -55,7 +55,7 @@ build_binary() {
     local component_name="$1"
     info "Building binary for component: ${component_name} (version: ${VERSION})"
     
-    local output_path="${OUTPUT_DIR}/bin/${component_name%-cli}"
+    local output_path="${OUTPUT_DIR}/bin/autopeer-${component_name%-cli}"
     local main_path="${PROJECT_ROOT}/cmd/${component_name}/main.go"
 
     if ! [ -f "${main_path}" ]; then

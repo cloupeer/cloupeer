@@ -1,0 +1,89 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bridge
+spec:
+  # For production, use at least 2 replicas for high availability
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: autopeer-bridge
+  template:
+    metadata:
+      annotations:
+        kubectl.kubernetes.io/default-container: bridge
+      labels:
+        app.kubernetes.io/name: autopeer-bridge
+    spec:
+      # Ensure deployment on compatible nodes
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                - key: kubernetes.io/arch
+                  operator: In
+                  values:
+                    - amd64
+                    - arm64
+                - key: kubernetes.io/os
+                  operator: In
+                  values:
+                    - linux
+      # Pod-level security context
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: hub
+        # Placeholder image, to be replaced by Kustomize
+        image: hub-placeholder
+        command:
+        - /autopeer-bridge # Assuming the binary name in the image is autopeer-bridge
+        args:
+        # Pass namespace and address as arguments
+        - --namespace=$(POD_NAMESPACE)
+        - --addr=:9090
+        # Add health probe port argument if you make it configurable
+        - --health-probe-bind-address=:8081
+        env:
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        ports:
+        - name: http
+          containerPort: 9090
+          protocol: TCP
+        - name: health
+          containerPort: 8081
+          protocol: TCP
+        # Container-level security context
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
+        # Health and readiness probes
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: health
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: health
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        # Resource requests and limits (adjust after performance testing)
+        resources:
+          limits:
+            cpu: 200m
+            memory: 128Mi
+          requests:
+            cpu: 50m
+            memory: 64Mi
+      serviceAccountName: hub
+      terminationGracePeriodSeconds: 10

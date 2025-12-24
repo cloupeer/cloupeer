@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: bridge
+spec:
+  selector:
+    app.kubernetes.io/name: autopeer-bridge
+  ports:
+  - name: http
+    port: 9090
+    targetPort: http
